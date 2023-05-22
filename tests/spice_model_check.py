@@ -11,31 +11,31 @@ print('Input Size: ',x.size())
 
 
 c1 = nn.Conv1d(1, 64, kernel_size=3, padding=1, stride=1 ,bias=True)  # same padding ,
-mx = nn.MaxPool1d(kernel_size=3, stride=2, padding=1 )  # valid padding, stride=kernel_size
+mx = nn.MaxPool1d(kernel_size=3, stride=2, padding=1, return_indices=True )  # valid padding, stride=kernel_size
 x = c1(x)
 print('Layer 1: ', x.size())
-x=mx(x)
+x, i1 = mx(x)
 print('Layer 1 after Pooling: ', x.size())
 my = nn.MaxPool1d(kernel_size=3, stride=2, padding=1, return_indices=True )
   
 c2 = nn.Conv1d(64, 128, kernel_size=3, padding=1, stride=1 ,bias=True) 
 x = c2(x)
 print('Layer 2: ', x.size())
-x=mx(x)
+x, i2 = mx(x)
 print('Layer 2 after Pooling: ', x.size())
 
 
 c3 = nn.Conv1d(128, 256, kernel_size=3, padding=1, stride=1 ,bias=True)
 x = c3(x)
 print('Layer 3: ', x.size())
-x=mx(x)
+x, i3 = mx(x)
 print('Layer 3 after Pooling: ', x.size())
 
 
 c4 = nn.Conv1d(256, 512, kernel_size=3, padding=1, stride=1 ,bias=True)
 x = c4(x)  # since same
 print('Layer 4: ', x.size())
-x=mx(x)
+x, i4 = mx(x)
 print('Layer 4 after Pooling: ', x.size())
 
 
@@ -43,7 +43,7 @@ print('Layer 4 after Pooling: ', x.size())
 c5 = nn.Conv1d(512, 512, kernel_size=3, padding=1, stride=1 ,bias=True)
 x = c5(x)
 print('Layer 5: ', x.size())
-x=mx(x)
+x, i5 = mx(x)
 print('Layer 5 after Pooling: ', x.size())
 
 
@@ -52,6 +52,8 @@ x = c6(x)
 print('Layer 6: ', x.size())
 x, i6=my(x)
 print('Layer 6 after Pooling: ', x.size(), i6.size())
+
+
 x=x.flatten()
 print("After flattening", x.size())
 f1 = nn.Linear(1024, 48)
@@ -63,13 +65,21 @@ print("output of Encoder: ", out.size() )
 print("Decoder-------------------------------")
 inp = out.reshape(1,1,-1)
 print("input size: ", inp.size())
-t1 = nn.ConvTranspose1d(1, 256, kernel_size=3, padding=1, stride=1, bias=True)
+
+fb1 = nn.Linear(1, 48)
+fb2 = nn.Linear(48, 1024)
+inp = fb2(fb1(inp)).reshape(1, 512, -1)
+print("after fc layers: ", inp.size())
+
+mp = nn.MaxUnpool1d(kernel_size=3, stride=2, padding=0)
+#inp = mp(inp, i6)
+print('Layer 1 after Pooling: ', inp.size())
+t1 = nn.ConvTranspose1d(512, 256, kernel_size=3, padding=1, stride=1, bias=True)
 inp = t1(inp)
 print('Layer 1: ', inp.size())
-# mp = nn.MaxUnpool1d(kernel_size=3, stride=2, padding=0)
-# inp = mp(inp, i6)
-# print('Layer 1 after Pooling: ', inp.size())
 
+#inp = mp(inp, i5)
+print('Layer 2 after Pooling: ', inp.size())
 t2 = nn.ConvTranspose1d(256, 256, kernel_size=3, padding=1, stride=1, bias=True)
 inp = t2(inp)
 print('Layer 2: ', inp.size())
