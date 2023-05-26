@@ -16,7 +16,7 @@ x = c1(x)
 print('Layer 1: ', x.size())
 x, i1 = mx(x)
 print('Layer 1 after Pooling: ', x.size())
-my = nn.MaxPool1d(kernel_size=3, stride=2, padding=1, return_indices=True )
+
   
 c2 = nn.Conv1d(64, 128, kernel_size=3, padding=1, stride=1 ,bias=True) 
 x = c2(x)
@@ -44,14 +44,14 @@ c5 = nn.Conv1d(512, 512, kernel_size=3, padding=1, stride=1 ,bias=True)
 x = c5(x)
 print('Layer 5: ', x.size())
 x, i5 = mx(x)
-print('Layer 5 after Pooling: ', x.size())
+print('Layer 5 after Pooling: ', x.size(), i5[:, :256, :].size())
 
 
 c6 = nn.Conv1d(512, 512, kernel_size=3, padding=1, stride=1 ,bias=True)
 x = c6(x)
 print('Layer 6: ', x.size())
-x, i6=my(x)
-print('Layer 6 after Pooling: ', x.size(), i6.size())
+x, i6 = mx(x)
+print('Layer 6 after Pooling: ', x.size(), i6[:,:256,:].size())
 
 
 x=x.flatten()
@@ -71,20 +71,26 @@ fb2 = nn.Linear(48, 1024)
 inp = fb2(fb1(inp)).reshape(1, 512, -1)
 print("after fc layers: ", inp.size())
 
-mp = nn.MaxUnpool1d(kernel_size=3, stride=2, padding=0)
-#inp = mp(inp, i6)
-print('Layer 1 after Pooling: ', inp.size())
+mp = nn.MaxUnpool1d(kernel_size=3, stride=1, padding=0)
+#
+inp = mp(inp, i6)
+print('Layer 1 after UnPooling: ', inp.size())
 t1 = nn.ConvTranspose1d(512, 256, kernel_size=3, padding=1, stride=1, bias=True)
 inp = t1(inp)
 print('Layer 1: ', inp.size())
 
-#inp = mp(inp, i5)
-print('Layer 2 after Pooling: ', inp.size())
+imp = torch.floor(i5[:,:256,:]/2).to(torch.int64)  # take only the first 256 channels
+#print('inp', imp.size())
+#inp = mp(inp, imp)
+#print('Layer 2 after UnPooling: ', inp.size())
 t2 = nn.ConvTranspose1d(256, 256, kernel_size=3, padding=1, stride=1, bias=True)
 inp = t2(inp)
 print('Layer 2: ', inp.size())
 
-
+imp2 = torch.floor(i4[:,:256,:6]/2).to(torch.int64)  # take only the first 256 channels
+#print('inp', imp2.size())
+#inp = mp(inp, imp2)
+#print('Layer 3 after UnPooling: ', inp.size())
 t3 = nn.ConvTranspose1d(256, 256, kernel_size=3, padding=1, stride=1, bias=True)
 inp = t3(inp)
 print('Layer 3: ', inp.size())
