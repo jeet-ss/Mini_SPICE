@@ -1,3 +1,8 @@
 *.pyc
 *.wav
 *.log
+/datasets
+/MDB-melody-synth
+/MedleyDB
+/MIR-1K
+/single_notes
