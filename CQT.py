@@ -391,14 +391,14 @@ def cell2sparse(Xcq, octaves, bins, firstcenter, atomHOP, atomNr):
     emptyHops = firstcenter/atomHOP
     drops = emptyHops*np.power(2, octaves - np.arange(1, octaves + 1)) - emptyHops
     Len = int(np.max((np.asarray([atomNr*c.shape[1] for _,c in Xcq.items()]) - drops) * np.power(2, np.arange(octaves)))) # number of columns of output matrix 
-    spCQT = np.empty((0,Len)).astype(np.complex)
+    spCQT = np.empty((0,Len)).astype(np.cdouble)
 
     for i in range(1, octaves+1)[::-1]:
         drop = int(emptyHops*2**(octaves-i)-emptyHops) # first coefficients of all octaves have to be in synchrony 
         X = Xcq[i]
 
         if  atomNr > 1: # more than one atom per bin --> reshape 
-            Xoct = np.zeros((bins, atomNr*X.shape[1] - drop)).astype(np.complex)
+            Xoct = np.zeros((bins, atomNr*X.shape[1] - drop)).astype(np.cdouble)
             for u in range(bins): # reshape to continous windows for each bin (for the case of several wins per frame) 
                 octX_bin = X[u*atomNr:(u+1)*atomNr,:]
                 Xcont = octX_bin.T.reshape(-1)
@@ -513,7 +513,7 @@ def sparse2cell(spCQT,bins,octaveNr,atomNr,firstcenter,atomHOP):
         X = np.concatenate([np.zeros((bins,dropped)), X], axis=-1)
         X = np.concatenate([X, np.zeros((bins,int(np.ceil(X.shape[1]/atomNr))*atomNr-X.shape[1]))], axis=-1)
         if atomNr > 1: # reshape 
-            Xcell = np.zeros((bins*atomNr,int(np.ceil(X.shape[1]/atomNr)))).astype(np.complex)
+            Xcell = np.zeros((bins*atomNr,int(np.ceil(X.shape[1]/atomNr)))).astype(np.cdouble)
             for u in range(1,bins+1):
                 Xbin = np.reshape(X[u-1,:], (atomNr,int(len(X[u-1,:])/atomNr)), order='F')
                 Xcell[(u-1)*atomNr:u*atomNr, :] = Xbin

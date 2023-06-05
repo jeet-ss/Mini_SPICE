@@ -89,7 +89,7 @@ class DataLoader:
         return np.minimum(lval, rval) <= self.tol
 
 class MedleyDBLoader(DataLoader):
-    def __init__(self, fs=44100, audio_loc="./MedleyDB/Audio", f0_loc="./MedleyDB/Pitch_Annotations", annot_hop=256, orig_fs=44100):
+    def __init__(self, fs=44100, audio_loc="./datasets/MedleyDB/Audio", f0_loc="./datasets/MedleyDB/Pitch_Annotations", annot_hop=256, orig_fs=44100):
         """ Initialize the DataLoader for MedleyDB
         
         Parameters
@@ -173,7 +173,7 @@ class MedleyDBLoader(DataLoader):
 
 
 class MDBMelodySynthLoader(DataLoader):
-    def __init__(self, fs=44100, audio_loc="./MDB-melody-synth/audio_melody", f0_loc="./MDB-melody-synth/annotation_melody", annot_hop=128, orig_fs=44100):
+    def __init__(self, fs=44100, audio_loc="./datasets/MDB-melody-synth/audio_melody", f0_loc="./datasets/MDB-melody-synth/annotation_melody", annot_hop=128, orig_fs=44100):
         """ Initialize the DataLoader for MDB-melody-synth
         
         Parameters
@@ -256,8 +256,8 @@ class MDBMelodySynthLoader(DataLoader):
 
 
 class MIR1KLoader(DataLoader):
-    def __init__(self, fs=44100, audio_loc="./MIR-1K/Wavfile", f0_loc="./MIR-1K/PitchLabel",
-                 voiced_loc="./MIR-1K/vocal-nonvocalLabel", annot_hop=320, orig_fs=16000):
+    def __init__(self, fs=44100, audio_loc="./datasets/MIR-1K/Wavfile", f0_loc="./datasets/MIR-1K/PitchLabel",
+                 voiced_loc="./datasets/MIR-1K/vocal-nonvocalLabel", annot_hop=320, orig_fs=16000):
         """ Initialize the DataLoader for MIR-1K
         
         Parameters
