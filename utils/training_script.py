@@ -24,20 +24,20 @@ def scaling_factor():
 class Trainer:
     
     def __init__(self, 
-                encoder,        # model to train
-                decoder,        
+                model,        # model to train
                 loss_pitch,     # Loss function
                 loss_recons,    
+                loss_conf,
                 optim,          # Optimizer
                 train_ds,       # Train dataset
                 val_test_ds,    # Validation dataset
                 w_pitch,        # weight for pitch loss
                 w_recon,        # weight for recons loss
                 ):
-        self._encoder = encoder.type(dtype)
-        self._decoder = decoder.type(dtype)
+        self._model = model.type(dtype)
         self._lossPitch = loss_pitch.type(dtype)
         self._lossRecons = loss_recons.type(dtype)
+        self._lossConf = loss_conf.type(dtype)
         self._optim = optim
         self._trainDs = train_ds.dtype(dtype)
         self._valDs = val_test_ds.dtype(dtype)
@@ -64,15 +64,15 @@ class Trainer:
         #
         x_1 = x_batch[:, 0]
         x_2 = x_batch[:, 1]
-        # Encoder 
-        pitch_H_1, conf_H_1, indx_mat_list_1 = self._encoder(x_1)
-        pitch_H_2, conf_H_2, indx_mat_list_2 = self._encoder(x_2)
+        # model 
+        pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
+        pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         # calculate loss
-        pitch_error = torch.abs((pitch_H_1 - pitch_H_2) - scaling_factor()*x_batch[:, 2])
+        sigma = scaling_factor()
+        pitch_error = torch.abs((pitch_H_1 - pitch_H_2) - sigma*x_batch[:, 2])
         lossPitch = self._lossPitch(pitch_error)  
-        # Decoder 
-        hat_x_1 = self._decoder(pitch_H_1, indx_mat_list_1)
-        hat_x_2 = self._decoder(pitch_H_2, indx_mat_list_2)
+        # conf head loss
+        lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, sigma)
         # take care of reshape
         if x_1.size() != hat_x_1.size():
             pass
@@ -81,8 +81,13 @@ class Trainer:
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
         # Backprop
         lossTotal.backward()
+        ''' Do I need to pass gradient for this algebraic loss func also?? '''
         # Update weights
         self._optim.step()
+        # freeze network for conf head
+
+        # update conf head weights
+
         # return 
         return lossTotal
 

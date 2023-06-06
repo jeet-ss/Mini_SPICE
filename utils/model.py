@@ -21,7 +21,7 @@ class Conv_block(nn.Module):
 class Spice_Encoder(nn.Module):
     def __init__(self, channel_list=[1, 64, 128, 256, 512, 512, 512]):
         ''' 
-            channel_list : is a list with channels for all conv blocks
+            channel_list : is a list with channels for all conv blocks, first entry is input channels
                 default is set to original values from paper
         '''
         super().__init__()
@@ -93,7 +93,8 @@ class Deconv_block(nn.Module):
         return input_1D
         
 class Spice_Decoder(nn.Module):
-    def __init__(self, channel_list = [512, 256, 256, 256, 128, 64, 32], unPooling_list = [True, False, False, False, False, False], ):
+    def __init__(self, channel_list = [512, 256, 256, 256, 128, 64, 32], 
+                unPooling_list = [True, False, False, False, False, False], ):
         super().__init__()
         """
             This version of Decoder uses only one Unpool layer after the first deconv layer.
@@ -101,7 +102,7 @@ class Spice_Decoder(nn.Module):
             We use the Fc layers and one Unpooling as default setting
             Since, One layer of Unpooling is necessary to match the dimension of input to Encoder.
 
-            channel_list : is a list with channels for all conv blocks
+            channel_list : is a list with channels for all conv blocks, first entry is input channels
                 default is set to original values from paper
 
             unPooling_list : is a list with bool values for deciding of Unpooling in each deconv layer
@@ -162,3 +163,25 @@ class Spice_Decoder(nn.Module):
             input_1D = self.deconv_block6(input_1D)
 
         return input_1D
+    
+class Spice_model(nn.Module):
+    def __init__(self, channel_enc_list = [1, 64, 128, 256, 512, 512, 512], 
+                channel_dec_list = [512, 256, 256, 256, 128, 64, 32],
+                unPooling_list = [True, False, False, False, False, False], ):
+        super().__init__()
+        """
+        Unified SPICE model
+            default version 
+        """
+        self.enc_block = Spice_Encoder(channel_list=channel_enc_list)
+        self.dec_block = Spice_Decoder(channel_list=channel_dec_list, unPooling_list=unPooling_list)
+
+    def forward(self, input_1D):
+        # pass through encoder
+        pitch_H, conf_H, mat_list = self.enc_block(input_1D)
+        # some reshaping of p_head
+
+        # decoder
+        hat_x = self.dec_block(pitch_H, mat_list)
+
+        return pitch_H, conf_H, hat_x
