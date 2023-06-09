@@ -1,6 +1,7 @@
 import numpy as np
 import librosa
 import argparse
+import scipy
 from dataloader import MedleyDBLoader, MDBMelodySynthLoader, MIR1KLoader
 
 
@@ -27,22 +28,41 @@ def generate_data():
 
     # load audio
     songs = []
+    f0_list = []
     for i, s in enumerate(id_list[:5]):
-        song, _ = dataset.load_data(s)
-        print(song.shape, s)
+        song, f0 = dataset.load_data(s)
+        print(song.shape, f0.shape)
         # convert stereo to mono
         songs.append(librosa.to_mono(song))
+        f0_list.append(f0)
 
     # Convert to CQT array and concat
-    Cqtt = np.zeros((190, 1))
-    for i, s in enumerate(songs):
+    Cqtt = np.zeros((1, 190))
+    F0_interp = np.zeros(1)
+    for s, f in zip(songs, f0_list):
         C = np.abs(librosa.cqt(s, sr=args.fs, hop_length=512, 
                     #window=librosa.filters.get_window('hann', Nx=1024, fftbins=False), 
                     fmin= librosa.note_to_hz('C1'),
                     n_bins=190, bins_per_octave=24))
-        print(C.shape)
-        Cqtt = np.hstack((Cqtt, C))
-    print("CQT Shape: ", Cqtt.shape)
+        #print("CQT shape: ", C.shape)
+        Cqtt = np.vstack((Cqtt, C.T))
+        # interpolate f0 for labels 
+        interpolator = scipy.interpolate.interp1d(x=f[0], y=f[2], axis=0)
+        f0_new = interpolator(C[0])
+        F0_interp = np.concatenate((F0_interp, f0_new))
+        #print("F0 interpolated shape: ", f0_new)
+    print("CQT & F0 Shape: ", Cqtt.shape, F0_interp.shape)
+
+    # remove zero rows
+    Cqtt = Cqtt[1:, :]
+    F0_interp = F0_interp[1:]
+    #elevate f0
+    F0_interp = F0_interp.reshape(-1, 1)
+    #print("CQT Shape: ", Cqtt.shape)
+    #print("F0 shape: ", F0_interp.shape)
+    # make the last column as f0s
+    data_np = np.hstack((Cqtt, F0_interp))
+
 
     # save CQT to file
     np.save()

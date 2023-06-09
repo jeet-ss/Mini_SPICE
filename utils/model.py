@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+""" Put Sigmoid/RelU layer after FC layer """
 
 class Conv_block(nn.Module):
     def __init__(self, in_channels, out_channels, filter_size=3, stride=1, 
