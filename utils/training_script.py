@@ -62,14 +62,13 @@ class Trainer:
         # reset grad to zero
         self._optim.zero_grad()
         #
-        x_1 = x_batch[:, 0]
-        x_2 = x_batch[:, 1]
+        pitch_diff, x_1, x_2 = x_batch
         # model 
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         # calculate loss
         sigma = scaling_factor()
-        pitch_error = torch.abs((pitch_H_1 - pitch_H_2) - sigma*x_batch[:, 2])
+        pitch_error = torch.abs((pitch_H_1 - pitch_H_2) - sigma*pitch_diff)
         lossPitch = self._lossPitch(pitch_error)  
         # conf head loss
         lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, sigma)
