@@ -62,7 +62,7 @@ class Trainer:
         # reset grad to zero
         self._optim.zero_grad()
         #
-        pitch_diff, x_1, x_2 = x_batch
+        pitch_diff, x_1, x_2, f0 = x_batch
         # model 
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)

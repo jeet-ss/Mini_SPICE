@@ -10,14 +10,11 @@ from torch.utils.data import DataLoader
 from utils.model import Spice_model
 from utils.training_script import Trainer
 from optims.loss import Huber_loss, Recons_loss, Conf_loss
-from data.dataset import CQT_Dataset
+from data_files.dataset import CQT_Dataset
 
 
-def train():
-    parser = argparse.ArgumentParser(description='Training of SPICE model for F0 estimation')
-    # parser.add_argument()
-    args = parser.parse_args()
-
+def train(args):
+    
     # define Hyperparams
     learning_rate = 0.1         # original 
     epochs_num = 10000
@@ -32,7 +29,7 @@ def train():
 
     # Load Data
     data_np = None                              # load nd.array from file
-    data_pd = pd.DataFrame(data=data_np).T      # Transpose is used as we have 190 features 
+    data_pd = pd.DataFrame(data=data_np)     
 
     # Split into batches and Dataloader 
     train, val = train_test_split(data_pd, train_size=0.8, test_size=0.2, random_state=1)
@@ -59,4 +56,8 @@ def train():
 
 
 if __name__ == '__main__':
-    train()
+    parser = argparse.ArgumentParser(description='Training of SPICE model for F0 estimation')
+    # parser.add_argument()
+    args = parser.parse_args()
+
+    train(args)
