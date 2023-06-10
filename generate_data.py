@@ -31,7 +31,7 @@ def generate_data(args):
     # load audio
     songs = []
     f0_list = []
-    for i, s in enumerate(id_list[:2]):
+    for i, s in enumerate(id_list[:1]):
         song, f0 = dataset.load_data(s)
         print(song.shape, f0.shape)
         # convert stereo to mono
@@ -75,7 +75,6 @@ def generate_data(args):
         os.makedirs(root_path)
     # save file
     file_path = os.path.join(root_path, file_name)
-    
     np.save(file=file_path, arr=data_np)
 
 
@@ -100,7 +99,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training of SPICE model for F0 estimation')
     parser.add_argument('--fs', type=int, default=16000, help='Sampling rate of Dataset')
     parser.add_argument('-ds', '--dataset', type=int, default=1, help='Dataset to Load')
-    parser.add_argument('-dir', '--data_dir', type=str, default='CQT2_data', help='Directory to store data')
+    parser.add_argument('-dir', '--data_dir', type=str, default='CQT_data', help='Directory to store data')
     args = parser.parse_args()
 
 

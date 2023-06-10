@@ -1,4 +1,5 @@
 import torch
+import os
 import numpy as np
 #from logger import Logger
 
@@ -45,15 +46,36 @@ class Trainer:
         self.w_recon = w_recon.dtype(dtype)
         #
         self.epoch_counter = 0
+        # path for saving and loading models
+        self.model_path = root_path = os.path.join(os.path.abspath(os.getcwd()), "M_checkpoints")
 
     def save_checkpoint(self, epoch):
-        pass
+        # create path
+        
+        if os.path.isdir(self.model_path) != True:
+            os.makedirs(self.model_path)
+        torch.save({'state_dict': self._model.state_dict()}, os.path.join(self.model_path, 'checkpoint_{:03d}.ckp'.format(epoch)))
 
-    def restore_checkpoint(Self, epoch):
-        pass
+    def restore_checkpoint(self, epoch):
+        checkpoint = torch.load(os.path.join(self.model_path, 'checkpoint_{:03d}.ckp'.format(epoch)), 'cuda' if USE_CUDA else None)
+        self._model.load_state_dict(checkpoint['state_dict'])
 
-    def save_model(self, filePath):
-        pass
+    def save_model_onnx(self, filePath):
+        m = self._model.cpu()
+        m.eval()
+        x = torch.randn(1, 128, requires_grad=True)
+        y = self._model(x)
+        torch.onnx.export(m,                 # model being run
+              x,                         # model input (or a tuple for multiple inputs)
+              filePath,                  # where to save the model (can be a file or file-like object)
+              export_params=True,        # store the trained parameter weights inside the model file
+              opset_version=10,          # the ONNX version to export the model to
+              do_constant_folding=True,  # whether to execute constant folding for optimization
+              input_names = ['input'],   # the model's input names
+              output_names = ['output'], # the model's output names
+              dynamic_axes={'input' : {0 : 'batch_size'},    # variable length axes
+                            'output' : {0 : 'batch_size'}})
+        
 
     def train_step(self, x_batch):
         """
