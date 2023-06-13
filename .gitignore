@@ -6,3 +6,6 @@
 /MedleyDB
 /MIR-1K
 /single_notes
+/MDB-stem-synth
+.DS_Store
+*.npy
