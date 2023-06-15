@@ -42,6 +42,7 @@ class Spice_Encoder(nn.Module):
 
     def forward(self, input_1D):
         #
+        input_1D = input_1D.unsqueeze(dim=0)
         batch_size = input_1D.size()[0]
         # conv blocks
         input_1D, mat_1 = self.conv_block1(input_1D)
@@ -53,7 +54,7 @@ class Spice_Encoder(nn.Module):
         # flatten by batch size
         input_1D = input_1D.reshape(batch_size, -1)
          # Pitch head 
-        pitch_head = self.fc1(self.fc1(input_1D))
+        pitch_head = self.fc2(self.fc1(input_1D))
         # Conf Head 
         conf_head = self.conf_head(input_1D)
 
@@ -112,7 +113,7 @@ class Spice_Decoder(nn.Module):
         self.input_channels = channel_list[0]
         self.unPooling_list = unPooling_list
         #
-        self.deconv_block1 = Deconv_block(channel_list[0], channel_list[1], unPooling = unPooling_list[0])
+        self.deconv_block1 = Deconv_block(channel_list[0], channel_list[1], unPooling = True)
         self.deconv_block2 = Deconv_block(channel_list[1], channel_list[2], unPooling = unPooling_list[1])
         self.deconv_block3 = Deconv_block(channel_list[2], channel_list[3], unPooling = unPooling_list[2])
         self.deconv_block4 = Deconv_block(channel_list[3], channel_list[4], unPooling = unPooling_list[3])
@@ -125,6 +126,8 @@ class Spice_Decoder(nn.Module):
 
         
     def forward(self, input_1D, unpool_mat_list = None):
+        ''' just do unsqueeze to make batch size one '''
+        input_1D = input_1D.unsqueeze(dim=0)
         batch_size = input_1D.size()[0]
         #
         input_1D = self.fc2(self.fc1(input_1D))
@@ -133,10 +136,11 @@ class Spice_Decoder(nn.Module):
         ###
         # do the deconv layer with or without Unpooling separately for each layer
         ###
-        if self.unPooling_list[0] and len(unpool_mat_list)>0:
-            input_1D = self.deconv_block1(input_1D, unpool_mat_list[0])
-        else:
-            input_1D = self.deconv_block1(input_1D)
+        input_1D = self.deconv_block1(input_1D, unpool_mat_list=unpool_mat_list[0])
+        # if self.unPooling_list[0] :
+        #     input_1D = self.deconv_block1(input_1D, unpool_mat_list=unpool_mat_list[0])
+        # else:
+        #     input_1D = self.deconv_block1(input_1D)
         #
         if self.unPooling_list[1] and len(unpool_mat_list)>1:
             input_1D = self.deconv_block2(input_1D, unpool_mat_list[1])

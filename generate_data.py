@@ -9,6 +9,7 @@ from data_files.dataset import CQT_Dataset
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
+from utils.model import Spice_model
 
 
 def dataset_select(indx: int, fs: int):
@@ -75,7 +76,7 @@ def generate_data(args):
         os.makedirs(root_path)
     # save file
     file_path = os.path.join(root_path, file_name)
-    np.save(file=file_path, arr=data_np)
+    #np.save(file=file_path, arr=data_np)
 
 
     ################################################################################
@@ -90,6 +91,11 @@ def generate_data(args):
     print(f"diff batch shape: {diff.size()}")
     print(f"slice1 batch shape: {slice1.size()}")
     print(f"slice2 batch shape: {f0.size()}")
+
+    spice = Spice_model()
+    for b in train_batches:
+        pitch_diff, x_1, x_2, f0 = b
+        a, x, y = spice(x_1)
     ##
     ###############################################################################
 

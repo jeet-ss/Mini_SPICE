@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 print("Encoder-----------------------------------")
-x = torch.arange(0, 1280, 1).type(torch.FloatTensor).reshape(10, 1, -1)
+x = torch.arange(0, 128, 1).type(torch.FloatTensor).reshape(1, 1, -1)
 print('Input Size: ',x.size())
 
 
@@ -50,9 +50,9 @@ c6 = nn.Conv1d(512, 512, kernel_size=3, padding=1, stride=1 ,bias=True)
 x = c6(x)
 print('Layer 6: ', x.size())
 x, i6 = mx(x)
-print('Layer 6 after Pooling: ', x.size(), i6[:,:256,:].size())
+print('Layer 6 after Pooling: ', x.size(), i6.size())
 
-x=x.reshape(10, -1)
+x=x.reshape(1, -1)
 print("After flattening", x.size())
 f1 = nn.Linear(1024, 48)
 f2 = nn.Linear(48, 1)
@@ -61,20 +61,20 @@ print("output of Encoder: ", out.size() )
 ''''''
 
 print("Decoder-------------------------------")
-inp = out.reshape(10,1,-1)
+inp = out.reshape(1,1,-1)
 print("input size: ", inp.size())
 
 fb1 = nn.Linear(1, 48)
 fb2 = nn.Linear(48, 1024)
-inp = fb2(fb1(inp)).reshape(10, 512, -1)
+inp = fb2(fb1(inp)).reshape(1, 512, -1)
 print("after fc layers: ", inp.size())
 
 mp = nn.MaxUnpool1d(kernel_size=3, stride=1, padding=0)
 #
 if inp.size() == i6.size():
-    pass
-    #inp = mp(inp, i6)
-    #print('Layer 1 after UnPooling: ', inp.size())
+    #pass
+    inp = mp(inp, i6)
+    print('Layer 1 after UnPooling: ', inp.size())
 t1 = nn.ConvTranspose1d(512, 256, kernel_size=3, padding=1, stride=1, bias=True)
 inp = t1(inp)
 print('Layer 1: ', inp.size())
