@@ -7,6 +7,7 @@ from data_files.dataloader import MedleyDBLoader, MDBMelodySynthLoader, MIR1KLoa
 # extra imports
 from data_files.dataset import CQT_Dataset
 import pandas as pd
+import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from utils.model import Spice_model
@@ -93,10 +94,15 @@ def generate_data(args):
     print(f"slice2 batch shape: {f0.size()}")
 
     spice = Spice_model()
+
+
     for b in train_batches:
         pitch_diff, x_1, x_2, f0 = b
+        x_1 = x_1.type(torch.FloatTensor)
+        #print(x_1.shape, x_1.type())
         a, x, y = spice(x_1)
-    ##
+        print(a.size(), x.size(), y.size())
+    #
     ###############################################################################
 
 
