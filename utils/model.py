@@ -41,7 +41,8 @@ class Spice_Encoder(nn.Module):
         self.conf_head = nn.Linear(1024, 1)
 
     def forward(self, input_1D):
-        #
+        # channel and batch size
+        input_1D = input_1D.unsqueeze(dim=1)
         batch_size = input_1D.size()[0]
         # conv blocks
         input_1D, mat_1 = self.conv_block1(input_1D)
@@ -53,7 +54,7 @@ class Spice_Encoder(nn.Module):
         # flatten by batch size
         input_1D = input_1D.reshape(batch_size, -1)
          # Pitch head 
-        pitch_head = self.fc1(self.fc1(input_1D))
+        pitch_head = self.fc2(self.fc1(input_1D))
         # Conf Head 
         conf_head = self.conf_head(input_1D)
 
@@ -77,6 +78,16 @@ class Deconv_block(nn.Module):
         self.unpool = nn.MaxUnpool1d(kernel_size=unPool_filter_size, stride=unPool_stride, padding=unPool_padding)
 
     def forward(self, input_1D, unpool_mat = None):
+        
+        # Unpool
+        if self.unPooling and unpool_mat is not None:
+            # check if indices and input are of same size to prevent error
+            if unpool_mat.size() == input_1D.size():
+                input_1D = self.unpool(input_1D, unpool_mat)
+            else:
+                print("Unpool matrix dont match size", input_1D.size(), unpool_mat.size())
+        else:
+            print("no unpooling", self.unPooling, unpool_mat is None)
         # Transpose conv
         input_1D = self.deconv(input_1D)
         # batch norm
@@ -84,13 +95,6 @@ class Deconv_block(nn.Module):
             input_1D = self.batchNorm(input_1D)
         # relu 
         input_1D = self.relu(input_1D)
-        # Unpool
-        if self.unPooling and unpool_mat is not None:
-            # check if indices and input are of same size to prevent error
-            if unpool_mat.size() == input_1D.size():
-                input_1D = self.unpool(input_1D, unpool_mat)
-            else:
-                print("Unpool matrix dont match size")
         return input_1D
         
 class Spice_Decoder(nn.Module):
@@ -112,8 +116,8 @@ class Spice_Decoder(nn.Module):
         self.input_channels = channel_list[0]
         self.unPooling_list = unPooling_list
         #
-        self.deconv_block1 = Deconv_block(channel_list[0], channel_list[1], unPooling = unPooling_list[0])
-        self.deconv_block2 = Deconv_block(channel_list[1], channel_list[2], unPooling = unPooling_list[1])
+        self.deconv_block1 = Deconv_block(channel_list[0], channel_list[1], unPooling = True)
+        self.deconv_block2 = Deconv_block(channel_list[1], channel_list[2], unPooling = True)
         self.deconv_block3 = Deconv_block(channel_list[2], channel_list[3], unPooling = unPooling_list[2])
         self.deconv_block4 = Deconv_block(channel_list[3], channel_list[4], unPooling = unPooling_list[3])
         self.deconv_block5 = Deconv_block(channel_list[4], channel_list[5], unPooling = unPooling_list[4])
@@ -125,6 +129,8 @@ class Spice_Decoder(nn.Module):
 
         
     def forward(self, input_1D, unpool_mat_list = None):
+        ''' just do unsqueeze to make batch size one '''
+        input_1D = input_1D.unsqueeze(dim=1)
         batch_size = input_1D.size()[0]
         #
         input_1D = self.fc2(self.fc1(input_1D))
@@ -133,33 +139,36 @@ class Spice_Decoder(nn.Module):
         ###
         # do the deconv layer with or without Unpooling separately for each layer
         ###
-        if self.unPooling_list[0] and len(unpool_mat_list)>0:
-            input_1D = self.deconv_block1(input_1D, unpool_mat_list[0])
+        #input_1D = self.deconv_block1(input_1D, unpool_mat_list[5])
+        if self.unPooling_list[0] and len(unpool_mat_list)>5:
+            input_1D = self.deconv_block1(input_1D, unpool_mat_list[5])
         else:
             input_1D = self.deconv_block1(input_1D)
-        #
-        if self.unPooling_list[1] and len(unpool_mat_list)>1:
-            input_1D = self.deconv_block2(input_1D, unpool_mat_list[1])
+        
+        if self.unPooling_list[1] and len(unpool_mat_list)>4:
+            #xx = torch.floor(unpool_mat_list[4][:,:256,:]/2).to(torch.int64)
+            #print("2nd deconv", xx.size(), input_1D.size())
+            input_1D = self.deconv_block2(input_1D, unpool_mat_list[4])
         else:
             input_1D = self.deconv_block2(input_1D)
         #
-        if self.unPooling_list[2] and len(unpool_mat_list)>2:
-            input_1D = self.deconv_block3(input_1D, unpool_mat_list[2])
+        if self.unPooling_list[2] and len(unpool_mat_list)>3:
+            input_1D = self.deconv_block3(input_1D, unpool_mat_list[3])
         else:
             input_1D = self.deconv_block3(input_1D)
         #
-        if self.unPooling_list[3] and len(unpool_mat_list)>3:
-            input_1D = self.deconv_block4(input_1D, unpool_mat_list[3])
+        if self.unPooling_list[3] and len(unpool_mat_list)>2:
+            input_1D = self.deconv_block4(input_1D, unpool_mat_list[2])
         else:
             input_1D = self.deconv_block4(input_1D)
         #
-        if self.unPooling_list[4] and len(unpool_mat_list)>4:
-            input_1D = self.deconv_block5(input_1D, unpool_mat_list[4])
+        if self.unPooling_list[4] and len(unpool_mat_list)>1:
+            input_1D = self.deconv_block5(input_1D, unpool_mat_list[1])
         else:
             input_1D = self.deconv_block5(input_1D)
         #
-        if self.unPooling_list[5] and len(unpool_mat_list)>5:
-            input_1D = self.deconv_block6(input_1D, unpool_mat_list[5])
+        if self.unPooling_list[5] and len(unpool_mat_list)>0:
+            input_1D = self.deconv_block6(input_1D, unpool_mat_list[0])
         else:
             input_1D = self.deconv_block6(input_1D)
 
@@ -178,6 +187,7 @@ class Spice_model(nn.Module):
         self.dec_block = Spice_Decoder(channel_list=channel_dec_list, unPooling_list=unPooling_list)
 
     def forward(self, input_1D):
+        # inout is [64, 128]
         # pass through encoder
         pitch_H, conf_H, mat_list = self.enc_block(input_1D)
         # some reshaping of p_head

@@ -61,10 +61,11 @@ class Trainer:
         self._model.load_state_dict(checkpoint['state_dict'])
 
     def save_model_onnx(self, filePath):
+        '''raise NotImplementedError'''
         m = self._model.cpu()
         m.eval()
         x = torch.randn(1, 128, requires_grad=True)
-        y = self._model(x)
+        p, c, h = self._model(x)
         torch.onnx.export(m,                 # model being run
               x,                         # model input (or a tuple for multiple inputs)
               filePath,                  # where to save the model (can be a file or file-like object)
@@ -100,40 +101,70 @@ class Trainer:
         # Decoder Loss
         lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
+        #
+        ''' should I train the conf head while training the pitch head '''
+        # freeze conf head
+        #self._model.enc_block.conf_head.weight.requires_grad = False
         # Backprop
         lossTotal.backward()
         ''' Do I need to pass gradient for this algebraic loss func also?? '''
         # Update weights
         self._optim.step()
         # freeze network for conf head
-
+        for param in self._model.parameters():
+            param.requires_grad = False
+        # unfreeze conf head
+        self._model.enc_block.conf_head.weight.requires_grad = True
         # update conf head weights
-
+        lossConf.backward()
+        # unfreeze model
+        for param in self._model.parameters():
+            param.requires_grad = True
         # return 
         return lossTotal
 
     def val_step(self, x_batch):
-        pass
+        pitch_diff, x_1, x_2, f0 = x_batch
+        # predict
+        pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
+        pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
+        # calculate frequency from pitch 
+        # some function
+        freq_0 = ()
+        # calc difference to f0
+        diff = np.abs(freq_0 - f0)
+        return diff
+
 
     def train_epoch(self):
         # set training mode
         self._model.training = True
         # iterate through the training set
         loss = 0
-        for x in self._trainDs:
+        for b in self._trainDs:
+            # if USE_CUDA:
+            #         b = b.cuda()
             # x is One batch of data
-            loss += self.train_step(x)
+            loss += self.train_step(b)
         # calculate avg batch loss for logging
         avg_loss = loss/self._trainDs.__len__()
         return avg_loss
 
 
-
     def val_test_epoch(self):
-        pass
+        #
+        self._model.eval()
+        # itr through val set
+        with torch.no_grad():
+            for b in self._valDs:
+                # if USE_CUDA:
+                #     b = b.cuda()
+
+                loss = self.val_step(b)
+
 
     def fit_model(self, epochs = -1):
-        assert epochs > 0
+        assert epochs > 0, 'Epochs > 0'
         #
         loss_train = np.array([])
         loss_val = np.array([])

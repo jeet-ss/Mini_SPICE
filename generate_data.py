@@ -7,33 +7,35 @@ from data_files.dataloader import MedleyDBLoader, MDBMelodySynthLoader, MIR1KLoa
 # extra imports
 from data_files.dataset import CQT_Dataset
 import pandas as pd
+import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
+from utils.model import Spice_model
 
 
 def dataset_select(indx: int, fs: int):
+    extension = ".npy"
     match indx:
         case 1 :
-            return MedleyDBLoader(fs), "MedleyDB.npy"
+            return MedleyDBLoader(fs), "MedleyDB" + extension
         case 2 :
-            return MDBMelodySynthLoader(fs), "MDBSynth.npy"
+            return MDBMelodySynthLoader(fs), "MDBSynth" + extension
         case 3:
-            return MIR1KLoader(fs), "MIR1k.npy"
-
-
-
-def generate_data(args):
+            return MIR1KLoader(fs), "MIR1k" + extension
     
 
+def generate_data(args):
+    """ generates CQT data and add label values after interpolation """
+    #
     dataset, file_name  = dataset_select(args.dataset, args.fs)
     id_list = dataset.get_ids()
 
     # load audio
     songs = []
     f0_list = []
-    for i, s in enumerate(id_list[:1]):
+    for i, s in enumerate(id_list[:3]):
         song, f0 = dataset.load_data(s)
-        print(song.shape, f0.shape)
+        print(song.shape, f0.shape, f0[0][:5], f0[2][:5])
         # convert stereo to mono
         songs.append(librosa.to_mono(song))
         f0_list.append(f0)
@@ -65,7 +67,8 @@ def generate_data(args):
 
     # make the last column as f0s
     data_np = np.hstack((Cqtt, F0_interp))
-    #print('final data: ', data_np.shape)
+    print('final data: ', data_np.shape)
+    
 
     # save CQT to file
     # get root directory and file path
@@ -75,22 +78,33 @@ def generate_data(args):
         os.makedirs(root_path)
     # save file
     file_path = os.path.join(root_path, file_name)
-    np.save(file=file_path, arr=data_np)
+    #print(file_path)
+    #np.save(file=file_path, arr=data_np)
 
 
     ################################################################################
     ##  Extra part form Train.py
     ## for testing
-    data_pd = pd.DataFrame(data=data_np) 
-    train, val = train_test_split(data_pd, train_size=0.8, test_size=0.2, random_state=1)
-    print("train shape: ", train.shape)
-    train_batches = DataLoader(CQT_Dataset(data=train, mode='train'), batch_size=64, shuffle=True)
-    print("train_batch shape: ", len(train_batches))
-    diff, slice1, slice2, f0 = next(iter(train_batches))
-    print(f"diff batch shape: {diff.size()}")
-    print(f"slice1 batch shape: {slice1.size()}")
-    print(f"slice2 batch shape: {f0.size()}")
-    ##
+    # data_pd = pd.DataFrame(data=data_np) 
+    # train, val = train_test_split(data_pd, train_size=0.8, test_size=0.2, random_state=1)
+    # print("train shape: ", train.shape)
+    # train_batches = DataLoader(CQT_Dataset(data=train, mode='train'), batch_size=64, shuffle=True)
+    # print("train_batch shape: ", len(train_batches))
+    # diff, slice1, slice2, f0 = next(iter(train_batches))
+    # print(f"diff batch shape: {diff.size()}")
+    # print(f"slice1 batch shape: {slice1.size()}")
+    # print(f"slice2 batch shape: {f0.size()}")
+
+    # spice = Spice_model()
+
+
+    # for b in train_batches:
+    #     pitch_diff, x_1, x_2, f0 = b
+    #     x_1 = x_1.type(torch.FloatTensor)
+    #     #print(x_1.shape, x_1.type())
+    #     a, x, y = spice(x_1)
+    #     print(a.size(), x.size(), y.size())
+    #
     ###############################################################################
 
 
