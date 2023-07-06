@@ -14,7 +14,7 @@ from utils.model import Spice_model
 
 
 def dataset_select(indx: int, fs: int):
-    extension = ".npy"
+    extension = ".pkl"
     match indx:
         case 1 :
             return MedleyDBLoader(fs), "MedleyDB" + extension
@@ -26,6 +26,9 @@ def dataset_select(indx: int, fs: int):
 
 def generate_data(args):
     """ generates CQT data and add label values after interpolation """
+    # constants
+    fs = args.fs
+    hop_len = 512
     #
     dataset, file_name  = dataset_select(args.dataset, args.fs)
     id_list = dataset.get_ids()
@@ -35,7 +38,7 @@ def generate_data(args):
     f0_list = []
     for i, s in enumerate(id_list[:3]):
         song, f0 = dataset.load_data(s)
-        print(song.shape, f0.shape, f0[0][:5], f0[2][:5])
+        print(song.shape, f0.shape, f0[0][15:20], f0[2][15:20])
         # convert stereo to mono
         songs.append(librosa.to_mono(song))
         f0_list.append(f0)
@@ -44,20 +47,21 @@ def generate_data(args):
     Cqtt = np.zeros((1, 190))
     F0_interp = np.zeros(1)
     for s, f in zip(songs, f0_list):
-        C = np.abs(librosa.cqt(s, sr=args.fs, hop_length=512, 
+        C = np.abs(librosa.cqt(s, sr=fs, hop_length=hop_len, 
                     #window=librosa.filters.get_window('hann', Nx=1024, fftbins=False), 
                     fmin= librosa.note_to_hz('C1'),
                     n_bins=190, bins_per_octave=24))
-        #print("CQT shape: ", C.shape)
+        print("CQT shape: ", C.shape)
         Cqtt = np.vstack((Cqtt, C.T))
         # interpolate f0 for labels 
-        interpolator = scipy.interpolate.interp1d(x=f[0], y=f[2], axis=0)
-        f0_new = interpolator(C[0])
+        interpolator = scipy.interpolate.interp1d(x=f[0], y=f[2], axis=0, fill_value = 'extrapolate')
+        interp_time = np.arange(0, C.shape[1], 1)*hop_len/fs
+        f0_new = interpolator(interp_time)
         F0_interp = np.concatenate((F0_interp, f0_new))
         #print("F0 interpolated shape: ", f0_new)data_pd = pd.DataFrame(data=data_np) 
     print("CQT & F0 Shape: ", Cqtt.shape, F0_interp.shape)
 
-    # remove zero rows
+    # remove empty rows at the start
     Cqtt = Cqtt[1:, :]
     F0_interp = F0_interp[1:]
     #elevate f0
@@ -69,8 +73,14 @@ def generate_data(args):
     data_np = np.hstack((Cqtt, F0_interp))
     print('final data: ', data_np.shape)
     
-
-    # save CQT to file
+    # load into pandas
+    df = pd.DataFrame(data=data_np)
+    print('Before', df.shape)
+    # remove rows of cqt where label (last) column is zero
+    df.drop(df.loc[df.iloc[:, -1]==0].index, inplace=True) 
+    print('after', df.shape)
+    
+    # save dataframe to file
     # get root directory and file path
     root_path = os.path.join(os.path.abspath(os.getcwd()), args.data_dir)
     # is directory not present already
@@ -80,6 +90,7 @@ def generate_data(args):
     file_path = os.path.join(root_path, file_name)
     #print(file_path)
     #np.save(file=file_path, arr=data_np)
+    df.to_pickle(file_path)
 
 
     ################################################################################
@@ -115,6 +126,6 @@ if __name__ == "__main__":
     parser.add_argument('-ds', '--dataset', type=int, default=1, help='Dataset to Load')
     parser.add_argument('-dir', '--data_dir', type=str, default='CQT_data', help='Directory to store data')
     args = parser.parse_args()
-
+    print(args)
 
     generate_data(args)

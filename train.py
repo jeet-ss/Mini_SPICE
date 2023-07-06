@@ -12,6 +12,10 @@ from utils.training_script import Trainer
 from optims.loss import Huber_loss, Recons_loss, Conf_loss
 from data_files.dataset import CQT_Dataset
 
+def scaling_factor(Q, fmax, fmin):
+    return 1 / (Q * torch.log2(fmax / fmin))
+    #return 1/2
+
 
 def train(args):
     
@@ -21,6 +25,7 @@ def train(args):
     loss_threshold = 0.01
     batch_size = 64             # original 64
     tau = 0.1                   # for huber loss
+    CQT_bins_per_octave = 24
 
     # Architecture params
     channel_enc_list = [1, 64, 128, 256, 512, 512, 512] 
@@ -29,12 +34,20 @@ def train(args):
 
     # Load Data
     data_np = None                              # load nd.array from file
-    data_pd = pd.DataFrame(data=data_np)     
+    #data_pd = pd.DataFrame(data=data_np)  
+    data_pd = pd.read_pickle(args.filepath) 
+    # remove rows of cqt where label (last) column is zero
+    data_pd.drop(data_pd.loc[data_pd.iloc[:, -1]==0].index, inplace=True) 
+    # get Fmax and Fmin of dataset
+    fmax = np.max(data_pd.iloc[:, -1])
+    fmin = np.min(data_pd.iloc[:, -1]) 
+    # get scaling factor sigma
+    sigma_ = scaling_factor(Q=CQT_bins_per_octave, fmax=fmax, fmin=fmin)
 
     # Split into batches and Dataloader 
     train, val = train_test_split(data_pd, train_size=0.8, test_size=0.2, random_state=1)
-    train_batches = DataLoader(CQT_Dataset(data=train, mode='train'), batch_size=64, shuffle=True)
-    val_batches = DataLoader(CQT_Dataset(data=val, mode='val'), batch_size=64, shuffle=True)
+    train_batches = DataLoader(CQT_Dataset(data=train, mode='train'), batch_size=batch_size, shuffle=True)
+    val_batches = DataLoader(CQT_Dataset(data=val, mode='val'), batch_size=batch_size, shuffle=True)
 
     # set up model 
     spice = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
@@ -48,7 +61,7 @@ def train(args):
     trainer = Trainer(model=spice, loss_pitch=pitch_loss, loss_recons=recons_loss, 
                         loss_conf=conf_loss,
                         optim=adam_optim, train_ds=train_batches, val_test_ds= val_batches,
-                        w_pitch=None, w_recon=None)
+                        w_pitch=None, w_recon=None, sigma = sigma_)
     # run training
     loss_train = trainer.fit_model(epochs=epochs_num)
 
@@ -57,7 +70,7 @@ def train(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training of SPICE model for F0 estimation')
-    # parser.add_argument()
+    parser.add_argument('--fp', '-filepath', type=str, help='file path of data')
     args = parser.parse_args()
 
     train(args)

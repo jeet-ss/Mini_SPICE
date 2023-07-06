@@ -9,3 +9,4 @@
 /MDB-stem-synth
 .DS_Store
 *.npy
+*.pkl

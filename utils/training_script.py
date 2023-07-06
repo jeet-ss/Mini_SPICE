@@ -18,9 +18,7 @@ dlongtype = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
 def to_np(x):
     return x.data.cpu().numpy() 
 
-def scaling_factor():
-    # 1 / (Q * torch.log2(fmax / fmin))
-    return 1/2
+
 
 class Trainer:
     
@@ -34,6 +32,7 @@ class Trainer:
                 val_test_ds,    # Validation dataset
                 w_pitch,        # weight for pitch loss
                 w_recon,        # weight for recons loss
+                sigma,        # pitch difference scaling factor
                 ):
         self._model = model.type(dtype)
         self._lossPitch = loss_pitch.type(dtype)
@@ -44,6 +43,7 @@ class Trainer:
         self._valDs = val_test_ds.dtype(dtype)
         self.w_pitch = w_pitch.dtype(dtype)
         self.w_recon = w_recon.dtype(dtype)
+        self.sigma = sigma.dtype(dtype)
         #
         self.epoch_counter = 0
         # path for saving and loading models
@@ -90,11 +90,10 @@ class Trainer:
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         # calculate loss
-        sigma = scaling_factor()
-        pitch_error = torch.abs((pitch_H_1 - pitch_H_2) - sigma*pitch_diff)
+        pitch_error = torch.abs((pitch_H_1 - pitch_H_2) - self.sigma*pitch_diff)
         lossPitch = self._lossPitch(pitch_error)  
         # conf head loss
-        lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, sigma)
+        lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
         # take care of reshape
         if x_1.size() != hat_x_1.size():
             pass
@@ -104,7 +103,7 @@ class Trainer:
         #
         ''' should I train the conf head while training the pitch head '''
         # freeze conf head
-        #self._model.enc_block.conf_head.weight.requires_grad = False
+        self._model.enc_block.conf_head.weight.requires_grad = False
         # Backprop
         lossTotal.backward()
         ''' Do I need to pass gradient for this algebraic loss func also?? '''
@@ -117,6 +116,8 @@ class Trainer:
         self._model.enc_block.conf_head.weight.requires_grad = True
         # update conf head weights
         lossConf.backward()
+        # uodate weights
+
         # unfreeze model
         for param in self._model.parameters():
             param.requires_grad = True
