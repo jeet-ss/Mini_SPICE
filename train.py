@@ -13,7 +13,8 @@ from optims.loss import Huber_loss, Recons_loss, Conf_loss
 from data_files.dataset import CQT_Dataset
 
 def scaling_factor(Q, fmax, fmin):
-    return 1 / (Q * torch.log2(fmax / fmin))
+    print('inside Q', fmax, fmin)
+    return 1 / (Q * np.log2(fmax / fmin))
     #return 1/2
 
 
@@ -24,8 +25,10 @@ def train(args):
     epochs_num = 10000
     loss_threshold = 0.01
     batch_size = 64             # original 64
-    tau = 0.1                   # for huber loss
+    tau = 0.1                  # for huber loss
     CQT_bins_per_octave = 24
+    wpitch = 3*np.power(10, 4)
+    wrecon = 1
 
     # Architecture params
     channel_enc_list = [1, 64, 128, 256, 512, 512, 512] 
@@ -33,16 +36,19 @@ def train(args):
     unPooling_list = [True, False, False, False, False, False]
 
     # Load Data
-    data_np = None                              # load nd.array from file
+    data_np = np.load('./CQT_data/MedleyDB.npy')                              # load nd.array from file
     #data_pd = pd.DataFrame(data=data_np)  
-    data_pd = pd.read_pickle(args.filepath) 
+    data_pd = pd.read_pickle("./CQT_data/MIR1k.pkl") 
     # remove rows of cqt where label (last) column is zero
-    data_pd.drop(data_pd.loc[data_pd.iloc[:, -1]==0].index, inplace=True) 
+    #data_pd.drop(data_pd.loc[data_pd.iloc[:, -1]==0].index, inplace=True) 
     # get Fmax and Fmin of dataset
     fmax = np.max(data_pd.iloc[:, -1])
     fmin = np.min(data_pd.iloc[:, -1]) 
     # get scaling factor sigma
     sigma_ = scaling_factor(Q=CQT_bins_per_octave, fmax=fmax, fmin=fmin)
+    # set tau for huber loss
+    tau = 0.25*sigma_
+    tau = 0.1
 
     # Split into batches and Dataloader 
     train, val = train_test_split(data_pd, train_size=0.8, test_size=0.2, random_state=1)
@@ -61,16 +67,17 @@ def train(args):
     trainer = Trainer(model=spice, loss_pitch=pitch_loss, loss_recons=recons_loss, 
                         loss_conf=conf_loss,
                         optim=adam_optim, train_ds=train_batches, val_test_ds= val_batches,
-                        w_pitch=None, w_recon=None, sigma = sigma_)
+                        w_pitch=wpitch, w_recon=wrecon, sigma = 0.1)
     # run training
     loss_train = trainer.fit_model(epochs=epochs_num)
+
 
     # plot data
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training of SPICE model for F0 estimation')
-    parser.add_argument('--fp', '-filepath', type=str, help='file path of data')
+    parser.add_argument('--fp', '-filepath', type=str, default="./CQT_data/MIR1k.pkl", help='file path of data')
     args = parser.parse_args()
 
     train(args)

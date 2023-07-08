@@ -39,11 +39,11 @@ class Trainer:
         self._lossRecons = loss_recons.type(dtype)
         self._lossConf = loss_conf.type(dtype)
         self._optim = optim
-        self._trainDs = train_ds.dtype(dtype)
-        self._valDs = val_test_ds.dtype(dtype)
-        self.w_pitch = w_pitch.dtype(dtype)
-        self.w_recon = w_recon.dtype(dtype)
-        self.sigma = sigma.dtype(dtype)
+        self._trainDs = train_ds#.type(dtype)
+        self._valDs = val_test_ds#.type(dtype)
+        self.w_pitch = w_pitch#.type(dtype)
+        self.w_recon = w_recon#.dtype(dtype)
+        self.sigma = sigma#.dtype(dtype)
         #
         self.epoch_counter = 0
         # path for saving and loading models
@@ -87,16 +87,19 @@ class Trainer:
         #
         pitch_diff, x_1, x_2, f0 = x_batch
         # model 
-        pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
-        pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
+        pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1.type(dtype))
+        pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2.type(dtype))
         # calculate loss
-        pitch_error = torch.abs((pitch_H_1 - pitch_H_2) - self.sigma*pitch_diff)
+        print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
+        pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
+        print('train 2 ', pitch_error.size())
         lossPitch = self._lossPitch(pitch_error)  
         # conf head loss
         lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
         # take care of reshape
         if x_1.size() != hat_x_1.size():
-            pass
+            hat_x_1 = torch.reshape(hat_x_1, (hat_x_1.size()[0], -1))
+            hat_x_2 = torch.reshape(hat_x_2, (hat_x_1.size()[0], -1))
         # Decoder Loss
         lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
@@ -105,19 +108,25 @@ class Trainer:
         # freeze conf head
         self._model.enc_block.conf_head.weight.requires_grad = False
         # Backprop
-        lossTotal.backward()
+        # for n, param in self._model.named_parameters():
+        #     if param.requires_grad == False:
+        #         print ('111111',n)
+        lossTotal.backward(retain_graph=True)
         ''' Do I need to pass gradient for this algebraic loss func also?? '''
         # Update weights
-        self._optim.step()
+        #self._optim.step()
         # freeze network for conf head
         for param in self._model.parameters():
             param.requires_grad = False
         # unfreeze conf head
         self._model.enc_block.conf_head.weight.requires_grad = True
         # update conf head weights
+        # for n, param in self._model.named_parameters():
+        #     if param.requires_grad:
+        #         print ('222222',n, param.data)
         lossConf.backward()
-        # uodate weights
-
+        # update weights
+        self._optim.step()
         # unfreeze model
         for param in self._model.parameters():
             param.requires_grad = True
@@ -183,8 +192,8 @@ class Trainer:
             train_loss = self.train_epoch()
             loss_train = np.append(loss_train, to_np(train_loss))
             #
-            if train_loss < min_loss:
-                min_loss = train_loss
-                self.save_checkpoint(epoch_counter)
+            # if train_loss < min_loss:
+            #     min_loss = train_loss
+            #     self.save_checkpoint(epoch_counter)
             
         return loss_train
