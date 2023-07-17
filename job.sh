@@ -1,8 +1,8 @@
 #!/bin/bash -l #
-#SBATCH --cpus-per-task = 8
-#SBATCH --gres = gpu:gtx3080:1
-#SBATCH --time = 06:00:00 
-#SBATCH --job-name = mpa_mir1k
+#SBATCH --cpus-per-task=8
+#SBATCH --gres=gpu:gtx3080:1
+#SBATCH --time=06:00:00 
+#SBATCH --job-name=mpa_mir1k
 #SBATCH --export=NONE 
 
 unset SLURM_EXPORT_ENV 
