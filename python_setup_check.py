@@ -13,3 +13,6 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from utils.model import Spice_model
+
+print("Imports Completed")
+print("Conda: ", torch.cuda.is_available())
