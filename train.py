@@ -36,7 +36,7 @@ def train(args):
     unPooling_list = [True, False, False, False, False, False]
 
     # Load Data
-    data_np = np.load('./CQT_data/MedleyDB.npy')                              # load nd.array from file
+    #data_np = np.load('./CQT_data/MedleyDB.npy')                              # load nd.array from file
     #data_pd = pd.DataFrame(data=data_np)  
     data_pd = pd.read_pickle("./CQT_data/MIR1k.pkl") 
     # remove rows of cqt where label (last) column is zero

@@ -10,3 +10,5 @@
 .DS_Store
 *.npy
 *.pkl
+*.ckp
+events.out.tfevents*

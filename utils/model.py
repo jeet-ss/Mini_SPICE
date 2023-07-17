@@ -86,8 +86,8 @@ class Deconv_block(nn.Module):
                 input_1D = self.unpool(input_1D, unpool_mat)
             else:
                 print("Unpool matrix dont match size", input_1D.size(), unpool_mat.size())
-        else:
-            print("no unpooling", self.unPooling, unpool_mat is None)
+        # else:
+        #     print("no unpooling", self.unPooling, unpool_mat is None)
         # Transpose conv
         input_1D = self.deconv(input_1D)
         # batch norm

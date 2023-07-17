@@ -25,7 +25,7 @@ class Recons_loss(t.nn.Module):
         super(Recons_loss, self).__init__()
 
     def forward(self, x_1, x_2, hat_x_1, hat_x_2 ):
-        print("recons", x_1.size(), hat_x_1.size())
+        #print("recons", x_1.size(), hat_x_1.size())
         error = t.add(t.square(t.linalg.norm(t.sub(x_1, hat_x_1), dim=1, ord=2)),
                         t.square(t.linalg.norm(t.sub(x_2, hat_x_2), dim=1, ord=2)))
         loss = t.mean(error)

@@ -1,7 +1,7 @@
 import torch
 import os
 import numpy as np
-#from logger import Logger
+from utils.logger import Logger
 
 # Global variables
 LOG_EVERY_N_STEPS = 100
@@ -12,7 +12,7 @@ dtype = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
 dlongtype = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
 
 # logging
-#logger = Logger('./logs')
+logger = Logger('./logs')
 
 # helper functions
 def to_np(x):
@@ -47,7 +47,7 @@ class Trainer:
         #
         self.epoch_counter = 0
         # path for saving and loading models
-        self.model_path = root_path = os.path.join(os.path.abspath(os.getcwd()), "M_checkpoints")
+        self.model_path = os.path.join(os.path.abspath(os.getcwd()), "M_checkpoints")
 
     def save_checkpoint(self, epoch):
         # create path
@@ -66,15 +66,15 @@ class Trainer:
         m.eval()
         x = torch.randn(1, 128, requires_grad=True)
         p, c, h = self._model(x)
-        torch.onnx.export(m,                 # model being run
-              x,                         # model input (or a tuple for multiple inputs)
-              filePath,                  # where to save the model (can be a file or file-like object)
-              export_params=True,        # store the trained parameter weights inside the model file
-              opset_version=10,          # the ONNX version to export the model to
-              do_constant_folding=True,  # whether to execute constant folding for optimization
-              input_names = ['input'],   # the model's input names
-              output_names = ['output'], # the model's output names
-              dynamic_axes={'input' : {0 : 'batch_size'},    # variable length axes
+        torch.onnx.export(m,                                    # model being run
+              x,                                                # model input (or a tuple for multiple inputs)
+              filePath,                                         # where to save the model (can be a file or file-like object)
+              export_params=True,                               # store the trained parameter weights inside the model file
+              opset_version=10,                                 # the ONNX version to export the model to
+              do_constant_folding=True,                         # whether to execute constant folding for optimization
+              input_names = ['input'],                          # the model's input names
+              output_names = ['output'],                        # the model's output names
+              dynamic_axes={'input' : {0 : 'batch_size'},       # variable length axes
                             'output' : {0 : 'batch_size'}})
         
 
@@ -90,9 +90,9 @@ class Trainer:
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1.type(dtype))
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2.type(dtype))
         # calculate loss
-        print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
+        #print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
-        print('train 2 ', pitch_error.size())
+        #print('train 2 ', pitch_error.size())
         lossPitch = self._lossPitch(pitch_error)  
         # conf head loss
         lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
@@ -191,9 +191,12 @@ class Trainer:
             # train for an epoch and then calculate the loss and metrics on the validation set
             train_loss = self.train_epoch()
             loss_train = np.append(loss_train, to_np(train_loss))
+            print("loss", epoch_counter , train_loss)
+            logger.scalar_summary("loss", train_loss, epoch_counter)
             #
-            # if train_loss < min_loss:
-            #     min_loss = train_loss
-            #     self.save_checkpoint(epoch_counter)
+            if train_loss < min_loss:
+                
+                min_loss = train_loss
+                self.save_checkpoint(epoch_counter)
             
         return loss_train
