@@ -106,6 +106,10 @@ class Trainer:
         # Decoder Loss
         lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
+        # detach data to clean gpu
+        x_1.detach()
+        x_2.detach()
+        pitch_diff.detach()
         #
         ''' should I train the conf head while training the pitch head '''
         # freeze conf head
