@@ -1,4 +1,4 @@
-#!/bin/bash -l #
+#!/bin/bash -l 
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
 #SBATCH --time=03:00:00 
@@ -15,4 +15,4 @@ source $HOME/spice/bin/activate
 cd $HPCVAULT/Mini_SPICE
 #ls
 #python --version
-srun python generate_data.py
+srun python train.py
