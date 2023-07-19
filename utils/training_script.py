@@ -86,9 +86,12 @@ class Trainer:
         self._optim.zero_grad()
         #
         pitch_diff, x_1, x_2, f0 = x_batch
+        x_1 = x_1.type(dtype)
+        x_2 = x_2.type(dtype)
+        pitch_diff = pitch_diff.type(dtype)
         # model 
-        pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1.type(dtype))
-        pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2.type(dtype))
+        pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
+        pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         # calculate loss
         #print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
