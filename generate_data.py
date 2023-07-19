@@ -36,7 +36,7 @@ def generate_data(args):
     # load audio
     songs = []
     f0_list = []
-    for i, s in enumerate(id_list[:20]):
+    for i, s in enumerate(id_list):
         song, f0 = dataset.load_data(s)
         print(song.shape, f0.shape, f0[0][15:20], f0[2][15:20])
         # convert stereo to mono
