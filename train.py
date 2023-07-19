@@ -13,6 +13,9 @@ from optims.loss import Huber_loss, Recons_loss, Conf_loss
 from data_files.dataset import CQT_Dataset
 
 def scaling_factor(Q, fmax, fmin):
+    # take care of negative inside log
+    if fmin<=0:
+        fmin = 1
     print('inside Q', fmax, fmin)
     return 1 / (Q * np.log2(fmax / fmin))
     #return 1/2
