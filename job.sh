@@ -1,8 +1,8 @@
 #!/bin/bash -l #
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
 #SBATCH --time=03:00:00 
-#SBATCH --job-name=mpa_2hr
+#SBATCH --job-name=mpa_3hr
 #SBATCH --export=NONE 
 
 unset SLURM_EXPORT_ENV 
@@ -11,6 +11,8 @@ unset SLURM_EXPORT_ENV
 export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
 
 #module load python/3.10-anaconda
-source /home/hpc/iwal/iwal131h/spice/bin/activate
-
-srun python train.py
+source $HOME/spice/bin/activate
+cd $HPCVAULT/Mini_SPICE
+#ls
+#python --version
+srun python generate_data.py

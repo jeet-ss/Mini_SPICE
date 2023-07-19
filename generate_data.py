@@ -123,7 +123,7 @@ def generate_data(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training of SPICE model for F0 estimation')
     parser.add_argument('--fs', type=int, default=16000, help='Sampling rate of Dataset')
-    parser.add_argument('-ds', '--dataset', type=int, default=3, help='Dataset to Load')
+    parser.add_argument('-ds', '--dataset', type=int, default=2, help='Dataset to Load')
     parser.add_argument('-dir', '--data_dir', type=str, default='CQT_data', help='Directory to store data')
     args = parser.parse_args()
     print(args)
