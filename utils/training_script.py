@@ -10,6 +10,7 @@ LOG_EVERY_N_STEPS = 100
 USE_CUDA = torch.cuda.is_available()
 dtype = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
 dlongtype = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
+device = 'cuda' if USE_CUDA else 'cpu'
 
 # logging
 logger = Logger('./logs')
@@ -157,7 +158,7 @@ class Trainer:
             # if USE_CUDA:
             #         b = b.cuda()
             # x is One batch of data
-            b = b.type(dtype)
+            b = b.to(device)
             loss += self.train_step(b)
             b = b.detach()
         # calculate avg batch loss for logging
