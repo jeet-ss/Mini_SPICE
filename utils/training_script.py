@@ -86,9 +86,7 @@ class Trainer:
         self._optim.zero_grad()
         #
         pitch_diff, x_1, x_2, f0 = x_batch
-        x_1 = x_1.type(dtype)
-        x_2 = x_2.type(dtype)
-        pitch_diff = pitch_diff.type(dtype)
+        
         # model 
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
@@ -106,10 +104,7 @@ class Trainer:
         # Decoder Loss
         lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
-        # detach data to clean gpu
-        x_1.detach()
-        x_2.detach()
-        pitch_diff.detach()
+        
         #
         ''' should I train the conf head while training the pitch head '''
         # freeze conf head
@@ -162,7 +157,9 @@ class Trainer:
             # if USE_CUDA:
             #         b = b.cuda()
             # x is One batch of data
+            b = b.type(dtype)
             loss += self.train_step(b)
+            b = b.detach()
         # calculate avg batch loss for logging
         avg_loss = loss/self._trainDs.__len__()
         return avg_loss
