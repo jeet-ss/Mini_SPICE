@@ -8,7 +8,7 @@ LOG_EVERY_N_STEPS = 100
 
 # CUDA variables
 USE_CUDA = torch.cuda.is_available()
-dtype = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
+dtype = torch.cuda.DoubleTensor if USE_CUDA else torch.DoubleTensor
 dlongtype = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
 device = 'cuda' if USE_CUDA else 'cpu'
 
@@ -84,13 +84,19 @@ class Trainer:
             x_batch : each batch element is a three-tuple of two slices of 128 dim and (kt,1 - kt,2)
         """
         # reset grad to zero
+        if USE_CUDA:
+            torch.cuda.empty_cache()
         self._optim.zero_grad()
         #
         pitch_diff, x_1, x_2, f0 = x_batch
+        pitch_diff = pitch_diff.type(dtype)
+        x_1 = x_1.type(dtype)
+        x_2 = x_2.type(dtype)
         
         # model 
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
+        
         # calculate loss
         #print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
@@ -105,7 +111,10 @@ class Trainer:
         # Decoder Loss
         lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
-        
+        #
+        pitch_diff = pitch_diff.detach()
+        x_1 = x_1.detach()
+        x_2 = x_2.detach()
         #
         ''' should I train the conf head while training the pitch head '''
         # freeze conf head
@@ -158,9 +167,9 @@ class Trainer:
             # if USE_CUDA:
             #         b = b.cuda()
             # x is One batch of data
-            b = b.to(device)
+            
             loss += self.train_step(b)
-            b = b.detach()
+            
         # calculate avg batch loss for logging
         avg_loss = loss/self._trainDs.__len__()
         return avg_loss
