@@ -150,7 +150,7 @@ class Trainer:
         for param in self._model.parameters():
             param.requires_grad = True
         # return 
-        return lossTotal
+        return lossTotal.detach().item()
 
     def val_step(self, x_batch):
         pitch_diff, x_1, x_2, f0 = x_batch
@@ -211,7 +211,7 @@ class Trainer:
             self.epoch_counter = epoch_counter
             # train for an epoch and then calculate the loss and metrics on the validation set
             train_loss = self.train_epoch()
-            loss_train = np.append(loss_train, to_np(train_loss))
+            loss_train = np.append(loss_train, train_loss)
             print("loss", epoch_counter , train_loss)
             logger.scalar_summary("loss", train_loss, epoch_counter)
             #

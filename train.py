@@ -27,7 +27,7 @@ def train(args):
     learning_rate = 0.1         # original 
     epochs_num = 10000
     loss_threshold = 0.01
-    batch_size = 64             # original 64
+    batch_size = 2             # original 64
     tau = 0.1                  # for huber loss
     CQT_bins_per_octave = 24
     wpitch = 3*np.power(10, 4)
