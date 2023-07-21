@@ -112,9 +112,16 @@ class Trainer:
         lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
         #
-        pitch_diff = pitch_diff.detach()
-        x_1 = x_1.detach()
-        x_2 = x_2.detach()
+        pitch_diff.detach()
+        x_1.detach()
+        x_2.detach()
+        pitch_H_1.detach()
+        pitch_H_2.detach()
+        conf_H_1.detach()
+        conf_H_2.detach()
+        hat_x_1.detach()
+        hat_x_2.detach()
+
         #
         ''' should I train the conf head while training the pitch head '''
         # freeze conf head
