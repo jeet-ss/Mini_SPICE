@@ -88,6 +88,7 @@ class Trainer:
             torch.cuda.empty_cache()
         self._optim.zero_grad()
         #
+        print("before ", len(x_batch) )
         pitch_diff, x_1, x_2, f0 = x_batch
         pitch_diff = pitch_diff.type(dtype)
         x_1 = x_1.type(dtype)
@@ -98,9 +99,9 @@ class Trainer:
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         
         # calculate loss
-        #print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
+        print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
-        #print('train 2 ', pitch_error.size())
+        print('train 2 ', pitch_error.size())
         lossPitch = self._lossPitch(pitch_error)  
         # conf head loss
         lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
@@ -184,7 +185,9 @@ class Trainer:
 
     def val_test_epoch(self):
         #
-        self._model.eval()
+        #self._model.eval()
+        #self._valDs = self._valDs.cuda()
+        print("val ds size", self._valDs.__len__())
         # itr through val set
         with torch.no_grad():
             for b in self._valDs:
@@ -210,7 +213,7 @@ class Trainer:
             epoch_counter += 1
             self.epoch_counter = epoch_counter
             # train for an epoch and then calculate the loss and metrics on the validation set
-            train_loss = self.train_epoch()
+            train_loss = self.val_test_epoch()
             loss_train = np.append(loss_train, train_loss)
             print("loss", epoch_counter , train_loss)
             logger.scalar_summary("loss", train_loss, epoch_counter)

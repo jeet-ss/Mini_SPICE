@@ -21,7 +21,7 @@ def dataset_select(indx: int, fs: int):
         case 2 :
             return MDBMelodySynthLoader(fs), "MDBSynth" + extension
         case 3:
-            return MIR1KLoader(fs), "MIR1k" + extension
+            return MIR1KLoader(fs), "MIR1kfull" + extension
     
 
 def generate_data(args):
@@ -31,6 +31,7 @@ def generate_data(args):
     hop_len = 512
     #
     dataset, file_name  = dataset_select(args.dataset, args.fs)
+    print("dataset: ", file_name)
     id_list = dataset.get_ids()
 
     # load audio
@@ -38,7 +39,7 @@ def generate_data(args):
     f0_list = []
     for i, s in enumerate(id_list):
         song, f0 = dataset.load_data(s)
-        print(song.shape, f0.shape, f0[0][15:20], f0[2][15:20])
+        #print(song.shape, f0.shape)
         # convert stereo to mono
         songs.append(librosa.to_mono(song))
         f0_list.append(f0)
@@ -51,7 +52,7 @@ def generate_data(args):
                     #window=librosa.filters.get_window('hann', Nx=1024, fftbins=False), 
                     fmin= librosa.note_to_hz('C1'),
                     n_bins=190, bins_per_octave=24))
-        print("CQT shape: ", C.shape)
+        #print("CQT shape: ", C.shape)
         Cqtt = np.vstack((Cqtt, C.T))
         # interpolate f0 for labels 
         interpolator = scipy.interpolate.interp1d(x=f[0], y=f[2], axis=0, fill_value = 'extrapolate')
@@ -123,7 +124,7 @@ def generate_data(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training of SPICE model for F0 estimation')
     parser.add_argument('--fs', type=int, default=16000, help='Sampling rate of Dataset')
-    parser.add_argument('-ds', '--dataset', type=int, default=2, help='Dataset to Load')
+    parser.add_argument('-ds', '--dataset', type=int, default=3, help='Dataset to Load')
     parser.add_argument('-dir', '--data_dir', type=str, default='CQT_data', help='Directory to store data')
     args = parser.parse_args()
     print(args)
