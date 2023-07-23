@@ -61,8 +61,8 @@ def train(args):
 
     # Split into batches and Dataloader 
     train, val = train_test_split(data_pd, train_size=0.8, test_size=0.2, random_state=1)
-    train_batches = DataLoader(CQT_Dataset(data=train, mode='train'), batch_size=batch_size, shuffle=True)
-    val_batches = DataLoader(CQT_Dataset(data=val, mode='val'), batch_size=batch_size, shuffle=True)
+    train_batches = DataLoader(CQT_Dataset(data=train, mode='train'), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    val_batches = DataLoader(CQT_Dataset(data=val, mode='val'), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     print("no of batches: ", len(train_batches))
 
     # set up model 
