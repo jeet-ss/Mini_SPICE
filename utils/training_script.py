@@ -99,7 +99,7 @@ class Trainer:
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         
         # calculate loss
-        if batch_counter % 20 == 0:
+        if batch_counter % 50 == 0:
             # print("batch", batch_counter, "loss", loss)
             print('in train', batch_counter, pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
