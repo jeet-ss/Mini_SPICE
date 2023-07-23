@@ -7,7 +7,7 @@ class Conv_block(nn.Module):
     def __init__(self, in_channels, out_channels, filter_size=3, stride=1, 
                 padding=1, pool_filter_size=3, pool_stride=2, pool_padding=1):
         super().__init__()
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size=filter_size, stride=stride, padding=padding, bias=True)
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size=filter_size, stride=stride, padding=padding, bias=False)
         self.batch = nn.BatchNorm1d(out_channels)
         self.relu = nn.ReLU()
         self.maxPool = nn.MaxPool1d(kernel_size=pool_filter_size, stride=pool_stride, padding=pool_padding, return_indices=True)
@@ -72,7 +72,7 @@ class Deconv_block(nn.Module):
         #
         self.unPooling = unPooling
         self.batch_norm = batch_norm  # bool to select batch norm
-        self.deconv = nn.ConvTranspose1d(in_channels, out_channels, kernel_size=filter_size, stride=stride, padding=padding)
+        self.deconv = nn.ConvTranspose1d(in_channels, out_channels, kernel_size=filter_size, stride=stride, padding=padding, bias=False)
         self.batchNorm = nn.BatchNorm1d(out_channels)
         self.relu = nn.ReLU()
         self.unpool = nn.MaxUnpool1d(kernel_size=unPool_filter_size, stride=unPool_stride, padding=unPool_padding)

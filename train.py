@@ -20,7 +20,7 @@ import re
 def scaling_factor(Q, fmax, fmin):
     # take care of negative inside log
     if fmin<=0:
-        fmin = 1
+        fmin = 24
     print('inside Q', fmax, fmin)
     return 1 / (Q * np.log2(fmax / fmin))
     #return 1/2
@@ -100,4 +100,4 @@ if __name__ == '__main__':
     ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
     ps.strip_dirs()
     print("s. value: " , s.getvalue())
-    ps.dump_stats('profileDump.crof')
+    ps.dump_stats('profileDump_bF.crof')
