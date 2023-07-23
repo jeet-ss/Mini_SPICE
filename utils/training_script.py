@@ -79,7 +79,7 @@ class Trainer:
                             'output' : {0 : 'batch_size'}})
         
 
-    def train_step(self, x_batch):
+    def train_step(self, x_batch, batch_counter,):
         """
             x_batch : each batch element is a three-tuple of two slices of 128 dim and (kt,1 - kt,2)
         """
@@ -88,7 +88,7 @@ class Trainer:
             torch.cuda.empty_cache()
         self._optim.zero_grad()
         #
-        print("before ", len(x_batch) )
+        #print("before ", len(x_batch) )
         pitch_diff, x_1, x_2, f0 = x_batch
         pitch_diff = pitch_diff.type(dtype)
         x_1 = x_1.type(dtype)
@@ -99,9 +99,12 @@ class Trainer:
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         
         # calculate loss
-        print('in train', pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
+        if batch_counter % 20 == 0:
+            # print("batch", batch_counter, "loss", loss)
+            print('in train', batch_counter, pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
-        print('train 2 ', pitch_error.size())
+
+        #print('train 2 ', pitch_error.size())
         lossPitch = self._lossPitch(pitch_error)  
         # conf head loss
         lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
@@ -145,6 +148,7 @@ class Trainer:
         #     if param.requires_grad:
         #         print ('222222',n, param.data)
         lossConf.backward()
+        lossConf.detach()
         # update weights
         self._optim.step()
         # unfreeze model
@@ -171,12 +175,16 @@ class Trainer:
         self._model.training = True
         # iterate through the training set
         loss = 0
+        batch_counter = 0
         for b in self._trainDs:
             # if USE_CUDA:
             #         b = b.cuda()
             # x is One batch of data
             
-            loss += self.train_step(b)
+            loss += self.train_step(b, batch_counter)
+            batch_counter += 1
+            if batch_counter % 100 == 0:
+                print("batch", batch_counter, "loss", loss)
             
         # calculate avg batch loss for logging
         avg_loss = loss/self._trainDs.__len__()
@@ -213,7 +221,7 @@ class Trainer:
             epoch_counter += 1
             self.epoch_counter = epoch_counter
             # train for an epoch and then calculate the loss and metrics on the validation set
-            train_loss = self.val_test_epoch()
+            train_loss = self.train_epoch()
             loss_train = np.append(loss_train, train_loss)
             print("loss", epoch_counter , train_loss)
             logger.scalar_summary("loss", train_loss, epoch_counter)
