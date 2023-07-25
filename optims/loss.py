@@ -1,7 +1,8 @@
 import torch as t
+import torch.nn as nn
 
 
-class Huber_loss(t.nn.Module):
+class Huber_loss(nn.Module):
     def __init__(self, tau=0.1):
         super(Huber_loss, self).__init__()
         self.tau = tau
@@ -20,7 +21,7 @@ class Huber_loss(t.nn.Module):
         return loss
         
 
-class Recons_loss(t.nn.Module):
+class Recons_loss(nn.Module):
     def __init__(self) :
         super(Recons_loss, self).__init__()
 
@@ -32,7 +33,7 @@ class Recons_loss(t.nn.Module):
         return loss
     
 
-class Conf_loss(t.nn.Module):
+class Conf_loss(nn.Module):
     def __init__(self, ) -> None:
         super(Conf_loss, self).__init__()
 
