@@ -43,6 +43,9 @@ def train(args):
     channel_dec_list = [512, 256, 256, 256, 128, 64, 32]
     unPooling_list = [True, False, False, False, False, False]
 
+    channel_dec_list_rev = [512, 512, 512, 256, 128, 64, 1]
+    unPooling_list_rev = [True, True, True, True, True, True]
+
     # Load Data
     #data_np = np.load('./CQT_data/MedleyDB.npy')                              # load nd.array from file
     #data_pd = pd.DataFrame(data=data_np)  
@@ -67,8 +70,10 @@ def train(args):
 
     # set up model 
     spice = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
+    spice_rev = Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev)
     # set up loss funcitons
-    pitch_loss = Huber_loss(tau=tau)
+    #pitch_loss = Huber_loss(tau=tau)
+    pitch_loss = torch.nn.HuberLoss(delta=tau)
     recons_loss = Recons_loss()
     conf_loss = Conf_loss()
     # set up optimizers

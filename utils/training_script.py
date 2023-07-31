@@ -103,9 +103,13 @@ class Trainer:
             # print("batch", batch_counter, "loss", loss)
             print('in train', batch_counter, pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
+        # extra
+        pitch_hat_diff = torch.abs(pitch_H_1.squeeze() - pitch_H_2.squeeze())
+        pitch_diff = self.sigma*pitch_diff
 
         #print('train 2 ', pitch_error.size())
-        lossPitch = self._lossPitch(pitch_error)  
+        #lossPitch = self._lossPitch(pitch_error)  
+        lossPitch = self._lossPitch(pitch_hat_diff, pitch_diff)
         # conf head loss
         lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
         # take care of reshape

@@ -116,8 +116,8 @@ class Spice_Decoder(nn.Module):
         self.input_channels = channel_list[0]
         self.unPooling_list = unPooling_list
         #
-        self.deconv_block1 = Deconv_block(channel_list[0], channel_list[1], unPooling = True)
-        self.deconv_block2 = Deconv_block(channel_list[1], channel_list[2], unPooling = True)
+        self.deconv_block1 = Deconv_block(channel_list[0], channel_list[1], unPooling = unPooling_list[0])
+        self.deconv_block2 = Deconv_block(channel_list[1], channel_list[2], unPooling = unPooling_list[1])
         self.deconv_block3 = Deconv_block(channel_list[2], channel_list[3], unPooling = unPooling_list[2])
         self.deconv_block4 = Deconv_block(channel_list[3], channel_list[4], unPooling = unPooling_list[3])
         self.deconv_block5 = Deconv_block(channel_list[4], channel_list[5], unPooling = unPooling_list[4])
