@@ -38,11 +38,12 @@ def train(args):
     wpitch = 3*np.power(10, 4)
     wrecon = 1
 
-    # Architecture params
+    ### Architecture params
+    # for 1 Unpool
     channel_enc_list = [1, 64, 128, 256, 512, 512, 512] 
     channel_dec_list = [512, 256, 256, 256, 128, 64, 32]
     unPooling_list = [True, False, False, False, False, False]
-
+    # mirror of encoder
     channel_dec_list_rev = [512, 512, 512, 256, 128, 64, 1]
     unPooling_list_rev = [True, True, True, True, True, True]
 
@@ -85,6 +86,7 @@ def train(args):
                         w_pitch=wpitch, w_recon=wrecon, sigma = 0.1)
     # run training
     loss_train = trainer.fit_model(epochs=epochs_num)
+    #trainer.save_model_onnx("check2.onnx")
 
 
     # plot data

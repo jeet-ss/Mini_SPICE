@@ -63,7 +63,7 @@ class Spice_Encoder(nn.Module):
 
 class Deconv_block(nn.Module):
     def __init__(self, in_channels, out_channels, filter_size=3, stride=1, 
-                padding=1, unPool_filter_size=3, unPool_stride=1, unPool_padding=0, unPooling=False, batch_norm=False):
+                padding=1, unPool_filter_size=3, unPool_stride=2, unPool_padding=1, unPooling=False, batch_norm=False):
         super().__init__()
         """
             The default values are as per the general understanding of the model in the paper.
@@ -77,13 +77,13 @@ class Deconv_block(nn.Module):
         self.relu = nn.ReLU()
         self.unpool = nn.MaxUnpool1d(kernel_size=unPool_filter_size, stride=unPool_stride, padding=unPool_padding)
 
-    def forward(self, input_1D, unpool_mat = None):
+    def forward(self, input_1D, unpool_mat = None, output_size = None):
         
         # Unpool
         if self.unPooling and unpool_mat is not None:
             # check if indices and input are of same size to prevent error
             if unpool_mat.size() == input_1D.size():
-                input_1D = self.unpool(input_1D, unpool_mat)
+                input_1D = self.unpool(input_1D, unpool_mat, output_size=output_size)
             else:
                 print("Unpool matrix dont match size", input_1D.size(), unpool_mat.size())
         # else:
@@ -141,34 +141,34 @@ class Spice_Decoder(nn.Module):
         ###
         #input_1D = self.deconv_block1(input_1D, unpool_mat_list[5])
         if self.unPooling_list[0] and len(unpool_mat_list)>5:
-            input_1D = self.deconv_block1(input_1D, unpool_mat_list[5])
+            input_1D = self.deconv_block1(input_1D, unpool_mat_list[5], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block1(input_1D)
         
         if self.unPooling_list[1] and len(unpool_mat_list)>4:
             #xx = torch.floor(unpool_mat_list[4][:,:256,:]/2).to(torch.int64)
             #print("2nd deconv", xx.size(), input_1D.size())
-            input_1D = self.deconv_block2(input_1D, unpool_mat_list[4])
+            input_1D = self.deconv_block2(input_1D, unpool_mat_list[4], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block2(input_1D)
         #
         if self.unPooling_list[2] and len(unpool_mat_list)>3:
-            input_1D = self.deconv_block3(input_1D, unpool_mat_list[3])
+            input_1D = self.deconv_block3(input_1D, unpool_mat_list[3], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block3(input_1D)
         #
         if self.unPooling_list[3] and len(unpool_mat_list)>2:
-            input_1D = self.deconv_block4(input_1D, unpool_mat_list[2])
+            input_1D = self.deconv_block4(input_1D, unpool_mat_list[2], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block4(input_1D)
         #
         if self.unPooling_list[4] and len(unpool_mat_list)>1:
-            input_1D = self.deconv_block5(input_1D, unpool_mat_list[1])
+            input_1D = self.deconv_block5(input_1D, unpool_mat_list[1], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block5(input_1D)
         #
         if self.unPooling_list[5] and len(unpool_mat_list)>0:
-            input_1D = self.deconv_block6(input_1D, unpool_mat_list[0])
+            input_1D = self.deconv_block6(input_1D, unpool_mat_list[0], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block6(input_1D)
 
