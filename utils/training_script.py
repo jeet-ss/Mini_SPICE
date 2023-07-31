@@ -8,7 +8,7 @@ LOG_EVERY_N_STEPS = 100
 
 # CUDA variables
 USE_CUDA = torch.cuda.is_available()
-dtype = torch.cuda.DoubleTensor if USE_CUDA else torch.DoubleTensor
+dtype = torch.cuda.FloatTensor if USE_CUDA else torch.DoubleTensor
 dlongtype = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
 device = 'cuda' if USE_CUDA else 'cpu'
 
