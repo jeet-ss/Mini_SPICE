@@ -99,12 +99,13 @@ class Trainer:
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         
         # calculate loss
-        if batch_counter % 50 == 0:
+        #if batch_counter % 50 == 0:
+            #print("Encoder values: ", pitch_H_1, conf_H_1, conf_H_2)
             # print("batch", batch_counter, "loss", loss)
-            print('in train', batch_counter, pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
+            #print('in train', batch_counter, pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
         # extra
-        pitch_hat_diff = torch.abs(pitch_H_1.squeeze() - pitch_H_2.squeeze())
+        pitch_hat_diff = torch.subtract(pitch_H_1.squeeze(), pitch_H_2.squeeze())
         pitch_diff = self.sigma*pitch_diff
 
         #print('train 2 ', pitch_error.size())
@@ -152,17 +153,25 @@ class Trainer:
         #     if param.requires_grad:
         #         print ('222222',n, param.data)
         lossConf.backward()
-        lossConf.detach()
         # update weights
         self._optim.step()
         # unfreeze model
         for param in self._model.parameters():
             param.requires_grad = True
         # return 
-        return lossTotal.detach().item()
+        return lossTotal.detach().item(), lossConf.detach().item()
 
     def val_step(self, x_batch):
+        ########
+        #
+        #   Validation cannot be done as we dont have the exact pitches
+        #   due to sync funciton required
+        #
+        #######
         pitch_diff, x_1, x_2, f0 = x_batch
+        #pitch_diff = pitch_diff.type(dtype)
+        x_1 = x_1.type(dtype)
+        x_2 = x_2.type(dtype)
         # predict
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
@@ -176,30 +185,34 @@ class Trainer:
 
     def train_epoch(self):
         # set training mode
-        self._model.training = True
+        self._model.train()
         # iterate through the training set
-        loss = 0
+        loss_p = 0
+        loss_c = 0
         batch_counter = 0
         for b in self._trainDs:
             # if USE_CUDA:
             #         b = b.cuda()
             # x is One batch of data
-            
-            loss += self.train_step(b, batch_counter)
+            p_loss, c_loss = self.train_step(b, batch_counter)
+            loss_p += p_loss
+            loss_c += c_loss
             batch_counter += 1
             if batch_counter % 100 == 0:
-                print("batch", batch_counter, "loss", loss)
+                print("batch", batch_counter, "loss", loss_p, c_loss)
             
         # calculate avg batch loss for logging
-        avg_loss = loss/self._trainDs.__len__()
-        return avg_loss
+        avg_loss = loss_p/self._trainDs.__len__()
+        avg_loss_c = loss_c/self._trainDs.__len__()
+        return avg_loss, avg_loss_c
 
 
     def val_test_epoch(self):
         #
-        #self._model.eval()
+        self._model.eval()
         #self._valDs = self._valDs.cuda()
         print("val ds size", self._valDs.__len__())
+        loss = 0
         # itr through val set
         with torch.no_grad():
             for b in self._valDs:
@@ -225,14 +238,14 @@ class Trainer:
             epoch_counter += 1
             self.epoch_counter = epoch_counter
             # train for an epoch and then calculate the loss and metrics on the validation set
-            train_loss = self.train_epoch()
-            loss_train = np.append(loss_train, train_loss)
-            print("loss", epoch_counter , train_loss)
-            logger.scalar_summary("loss", train_loss, epoch_counter)
+            train_loss_p, train_loss_c = self.train_epoch()
+            loss_train = np.append(loss_train, train_loss_p)
+            print("loss", epoch_counter , train_loss_p, train_loss_c)
+            logger.scalar_summary("loss", train_loss_p, epoch_counter)
             #
-            if train_loss < min_loss:
+            if train_loss_p < min_loss:
                 
-                min_loss = train_loss
+                min_loss = train_loss_p
                 self.save_checkpoint(epoch_counter)
             
         return loss_train
