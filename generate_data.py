@@ -21,7 +21,7 @@ def dataset_select(indx: int, fs: int):
         case 2 :
             return MDBMelodySynthLoader(fs), "MDBSynth" + extension
         case 3:
-            return MIR1KLoader(fs), "MIR1kfull" + extension
+            return MIR1KLoader(fs), "MIR1k" + extension
     
 
 def generate_data(args):
@@ -37,13 +37,17 @@ def generate_data(args):
     # load audio
     songs = []
     f0_list = []
+    foo = []
     for i, s in enumerate(id_list):
         song, f0 = dataset.load_data(s)
         #print(song.shape, f0.shape)
         # convert stereo to mono
         songs.append(librosa.to_mono(song))
         f0_list.append(f0)
-
+        foo = np.concatenate((foo, f0[2]), axis=0)
+    # remove zeros
+    foo = foo[foo!=0]
+    print("fo", foo.shape, np.max(foo), np.min(foo)   )
     # Convert to CQT array and concat
     Cqtt = np.zeros((1, 190))
     F0_interp = np.zeros(1)
@@ -78,7 +82,7 @@ def generate_data(args):
     df = pd.DataFrame(data=data_np)
     print('Before', df.shape)
     # remove rows of cqt where label (last) column is zero
-    df.drop(df.loc[df.iloc[:, -1]==0].index, inplace=True) 
+    #df.drop(df.loc[df.iloc[:, -1]<=20].index, inplace=True) 
     print('after', df.shape)
     
     # save dataframe to file
@@ -91,7 +95,7 @@ def generate_data(args):
     file_path = os.path.join(root_path, file_name)
     #print(file_path)
     #np.save(file=file_path, arr=data_np)
-    df.to_pickle(file_path)
+    #df.to_pickle(file_path)
 
 
     ################################################################################

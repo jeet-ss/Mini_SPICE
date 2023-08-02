@@ -23,7 +23,7 @@ class Huber_loss(nn.Module):
 
 class Recons_loss(nn.Module):
     def __init__(self) :
-        super(Recons_loss, self).__init__()
+        super().__init__()
 
     def forward(self, x_1, x_2, hat_x_1, hat_x_2 ):
         #print("recons", x_1.size(), hat_x_1.size())
@@ -35,7 +35,7 @@ class Recons_loss(nn.Module):
 
 class Conf_loss(nn.Module):
     def __init__(self, ) -> None:
-        super(Conf_loss, self).__init__()
+        super().__init__()
 
     def forward(self, c_1, c_2, e_t, sigma):
         # mean along batch dimension
