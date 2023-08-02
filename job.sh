@@ -1,7 +1,7 @@
 #!/bin/bash -l 
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
-#SBATCH --time=03:00:00 
+#SBATCH --time=23:59:00 
 #SBATCH --job-name=mpa_1
 #SBATCH --export=NONE 
 

@@ -11,6 +11,7 @@ from utils.model import Spice_model
 from utils.training_script import Trainer
 from optims.loss import Huber_loss, Recons_loss, Conf_loss
 from data_files.dataset import CQT_Dataset
+from utils.model_types import Spice_model_Sterne
 
 #
 import cProfile, pstats, io
@@ -76,6 +77,7 @@ def train(args):
     # set up model 
     spice = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
     spice_rev = Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev)
+    spice_st = Spice_model_Sterne()
     # set up loss funcitons
     #pitch_loss = Huber_loss(tau=tau)
     pitch_loss = torch.nn.HuberLoss(delta=tau)
@@ -84,7 +86,7 @@ def train(args):
     # set up optimizers
     adam_optim = torch.optim.Adam(spice.parameters(), lr=learning_rate)
     # set up Trainer object
-    trainer = Trainer(model=spice, loss_pitch=pitch_loss, loss_recons=recons_loss, 
+    trainer = Trainer(model=spice_st, loss_pitch=pitch_loss, loss_recons=recons_loss, 
                         loss_conf=conf_loss,
                         optim=adam_optim, train_ds=train_batches, val_test_ds= val_batches,
                         w_pitch=wpitch, w_recon=wrecon, sigma = sigma_)
