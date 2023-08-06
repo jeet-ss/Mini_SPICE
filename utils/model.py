@@ -91,8 +91,8 @@ class Deconv_block(nn.Module):
         # Transpose conv
         input_1D = self.deconv(input_1D)
         # batch norm
-        if self.batch_norm:
-            input_1D = self.batchNorm(input_1D)
+        #if self.batch_norm:
+        input_1D = self.batchNorm(input_1D)
         # relu 
         input_1D = self.relu(input_1D)
         return input_1D

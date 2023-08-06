@@ -11,7 +11,7 @@ from utils.model import Spice_model
 from utils.training_script import Trainer
 from optims.loss import Huber_loss, Recons_loss, Conf_loss
 from data_files.dataset import CQT_Dataset
-from utils.decoders import Spice_model_Sterne
+from utils.decoders import Spice_model_Sterne, Spice_model_1Unpool, Spice_model_Mirror
 
 #
 import cProfile, pstats, io
@@ -75,20 +75,26 @@ def train(args):
     print("no of batches: ", len(train_batches)," sigma: ", sigma_)
 
     # set up model 
-    spice_o = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
-    spiceC = torch.compile(Spice_model(channel_enc_list, channel_dec_list, unPooling_list))
+    spice_u = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
+    spice_uC = torch.compile(Spice_model(channel_enc_list, channel_dec_list, unPooling_list))
     spice_r = Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev)
     spice_rC = torch.compile(Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev))
     spice_s = Spice_model_Sterne()
+    sp_r = Spice_model_Mirror()
+    sp_u = Spice_model_1Unpool()
+    sp_rC = torch.compile(Spice_model_Mirror())
+    sp_uC = torch.compile(Spice_model_1Unpool())
+    #
+    
     # set up loss funcitons
     #pitch_loss = Huber_loss(tau=tau)
     pitch_loss = torch.nn.HuberLoss(delta=tau)
     recons_loss = Recons_loss()
     conf_loss = Conf_loss()
     # set up optimizers
-    adam_optim = torch.optim.Adam(spice_o.parameters(), lr=learning_rate)
+    adam_optim = torch.optim.Adam(spice_u.parameters(), lr=learning_rate)
     # set up Trainer object
-    trainer = Trainer(model=spice_o, loss_pitch=pitch_loss, loss_recons=recons_loss, 
+    trainer = Trainer(model=spice_u, loss_pitch=pitch_loss, loss_recons=recons_loss, 
                         loss_conf=conf_loss,
                         optim=adam_optim, train_ds=train_batches, val_test_ds= val_batches,
                         w_pitch=wpitch, w_recon=wrecon, sigma = sigma_)

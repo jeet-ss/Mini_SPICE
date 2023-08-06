@@ -87,6 +87,28 @@ class Spice_Decoder_1Unpool(nn.Module):
 
         return input_1D
     
+class Spice_model_1Unpool(nn.Module):
+    def __init__(self, channel_enc_list = [1, 64, 128, 256, 512, 512, 512], 
+                channel_dec_list = [512, 256, 256, 256, 128, 64, 32],):
+        super().__init__()
+        """
+        Unified SPICE model
+            default version 
+        """
+        self.enc_block = Spice_Encoder(channel_list=channel_enc_list)
+        self.dec_block = Spice_Decoder_1Unpool(channel_list=channel_dec_list)
+
+    def forward(self, input_1D):
+        # inout is [64, 128]
+        # pass through encoder
+        pitch_H, conf_H, mat_list = self.enc_block(input_1D)
+        # some reshaping of p_head
+
+        # decoder
+        hat_x = self.dec_block(pitch_H, mat_list)
+
+        return pitch_H, conf_H, hat_x
+    
 class Spice_Decoder_Mirror(nn.Module):
     def __init__(self, channel_list = [512, 512, 512, 256, 128, 64, 1], ):
         super().__init__()
@@ -142,7 +164,28 @@ class Spice_Decoder_Mirror(nn.Module):
         input_1D = self.deconv_block6(input_1D)
 
         return input_1D
+    
+class Spice_model_Mirror(nn.Module):
+    def __init__(self, channel_enc_list = [1, 64, 128, 256, 512, 512, 512], 
+                channel_dec_list = [512, 512, 512, 256, 128, 64, 1],):
+        super().__init__()
+        """
+        Unified SPICE model
+            Mirrored Decoder
+        """
+        self.enc_block = Spice_Encoder(channel_list=channel_enc_list)
+        self.dec_block = Spice_Decoder_Mirror(channel_list=channel_dec_list)
 
+    def forward(self, input_1D):
+        # inout is [64, 128]
+        # pass through encoder
+        pitch_H, conf_H, mat_list = self.enc_block(input_1D)
+        # some reshaping of p_head
+
+        # decoder
+        hat_x = self.dec_block(pitch_H, mat_list)
+
+        return pitch_H, conf_H, hat_x
 
 class Spice_Decoder_sterne(nn.Module):
     def __init__(self, channel_list = [1, 256, 256, 256, 128, 64, 64], ):
