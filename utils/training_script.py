@@ -246,6 +246,6 @@ class Trainer:
             if train_loss_p < min_loss:
                 
                 min_loss = train_loss_p
-                self.save_checkpoint(epoch_counter)
+                #self.save_checkpoint(epoch_counter)
             
         return loss_train

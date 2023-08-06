@@ -11,7 +11,7 @@ from utils.model import Spice_model
 from utils.training_script import Trainer
 from optims.loss import Huber_loss, Recons_loss, Conf_loss
 from data_files.dataset import CQT_Dataset
-from utils.model_types import Spice_model_Sterne
+from utils.decoders import Spice_model_Sterne
 
 #
 import cProfile, pstats, io
@@ -31,7 +31,7 @@ def train(args):
     
     # define Hyperparams
     learning_rate = 1e-4       # original 1e-4
-    epochs_num = 800
+    epochs_num = 1
     batch_size = 64             # original 64
     #tau = 0.1                  # for huber loss
     CQT_bins_per_octave = 24
@@ -75,18 +75,20 @@ def train(args):
     print("no of batches: ", len(train_batches)," sigma: ", sigma_)
 
     # set up model 
-    spice = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
-    spice_rev = Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev)
-    spice_st = Spice_model_Sterne()
+    spice_o = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
+    spiceC = torch.compile(Spice_model(channel_enc_list, channel_dec_list, unPooling_list))
+    spice_r = Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev)
+    spice_rC = torch.compile(Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev))
+    spice_s = Spice_model_Sterne()
     # set up loss funcitons
     #pitch_loss = Huber_loss(tau=tau)
     pitch_loss = torch.nn.HuberLoss(delta=tau)
     recons_loss = Recons_loss()
     conf_loss = Conf_loss()
     # set up optimizers
-    adam_optim = torch.optim.Adam(spice.parameters(), lr=learning_rate)
+    adam_optim = torch.optim.Adam(spice_o.parameters(), lr=learning_rate)
     # set up Trainer object
-    trainer = Trainer(model=spice_st, loss_pitch=pitch_loss, loss_recons=recons_loss, 
+    trainer = Trainer(model=spice_o, loss_pitch=pitch_loss, loss_recons=recons_loss, 
                         loss_conf=conf_loss,
                         optim=adam_optim, train_ds=train_batches, val_test_ds= val_batches,
                         w_pitch=wpitch, w_recon=wrecon, sigma = sigma_)
