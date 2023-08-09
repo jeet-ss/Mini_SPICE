@@ -7,6 +7,7 @@ from torch import nn
 
 batch_size = 10
 
+
 print("Encoder-----------------------------------")
 x = torch.arange(0, 1280, 1).type(torch.FloatTensor).reshape(batch_size, 1, -1)
 print('Input Size: ',x.size())
