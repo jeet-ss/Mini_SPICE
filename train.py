@@ -39,7 +39,7 @@ def train(args):
     wpitch = 3*np.power(10, 4)
     wrecon = 1
     retrain_epoch = 9
-    name_variant='rev_1k'
+    name_variant='rev_1k_'
 
     ### Architecture params
     # for 1 Unpool
@@ -103,14 +103,18 @@ def train(args):
                         optim=adam_optim, train_ds=train_batches, val_test_ds= val_batches,
                         w_pitch=wpitch, w_recon=wrecon, sigma = sigma_, name_variant=name_variant)
     # run training
-    trainer.restore_checkpoint(retrain_epoch)
+    #trainer.restore_checkpoint(retrain_epoch)
     loss_data = trainer.fit(epochs_st, epochs_end)
+    loss_data.update({
+        'condts' : 'Shuffle->True, Augmentation->False',
+        'params' : 'Mir1k data, 1k epoch,'
+    })
     #trainer.save_model_onnx("check2.onnx")
-    np.save(name_variant+'_data.npy', loss_data)
+    np.save(name_variant+'data.npy', loss_data)
 
     # get encoder output
     #y_hat = trainer.val_test_epoch(batch_data=val_batches,  mode='encoder_out')
-    #np.save(name_variant+'_y_hat.npy', y_hat)
+    #np.save(name_variant+'y_hat.npy', y_hat)
     #print(yh1.shape)
 
     # plot data
