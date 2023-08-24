@@ -2,6 +2,7 @@ import torch
 import os
 import numpy as np
 from utils.logger import Logger
+import tqdm
 
 # Global variables
 LOG_EVERY_N_STEPS = 100
@@ -34,6 +35,7 @@ class Trainer:
                 w_pitch,        # weight for pitch loss
                 w_recon,        # weight for recons loss
                 sigma,        # pitch difference scaling factor
+                name_variant,   # string to create diff logs
                 ):
         self._model = model.type(dtype)
         self._lossPitch = loss_pitch.type(dtype)
@@ -47,8 +49,9 @@ class Trainer:
         self.sigma = sigma#.dtype(dtype)
         #
         self.epoch_counter = 0
+        logger.update_dir('l'+name_variant)
         # path for saving and loading models
-        self.model_path = os.path.join(os.path.abspath(os.getcwd()), "M_checkpoints")
+        self.model_path = os.path.join(os.path.abspath(os.getcwd()), name_variant+"checkpoints")
 
     def save_checkpoint(self, epoch):
         # create path
@@ -123,13 +126,13 @@ class Trainer:
         #
         pitch_diff.detach()
         x_1.detach()
-        x_2.detach()
-        pitch_H_1.detach()
-        pitch_H_2.detach()
-        conf_H_1.detach()
-        conf_H_2.detach()
-        hat_x_1.detach()
-        hat_x_2.detach()
+        x_2 = x_2.detach()
+        pitch_H_1 = pitch_H_1.cpu().detach()
+        pitch_H_2 = pitch_H_2.cpu().detach()
+        conf_H_1 = conf_H_1.cpu().detach()
+        conf_H_2 = conf_H_2.cpu().detach()
+        hat_x_1 = hat_x_1.cpu().detach()
+        hat_x_2 = hat_x_2.cpu().detach()
 
         #
         ''' should I train the conf head while training the pitch head '''
@@ -169,20 +172,59 @@ class Trainer:
         #
         #######
         pitch_diff, x_1, x_2, f0 = x_batch
-        #pitch_diff = pitch_diff.type(dtype)
+        pitch_diff = pitch_diff.type(dtype)
         x_1 = x_1.type(dtype)
         x_2 = x_2.type(dtype)
         # predict
         pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
+
+        
+        # calculate error
+        pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
+        # pitch loss
+        pitch_hat_diff = torch.subtract(pitch_H_1.squeeze(), pitch_H_2.squeeze())
+        pitch_diff = self.sigma*pitch_diff
+        lossPitch = self._lossPitch(pitch_hat_diff, pitch_diff)
+        #lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
+        lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
+        lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
         # calculate frequency from pitch 
         # some function
         freq_0 = ()
+        #
+        pitch_H_1 = pitch_H_1.cpu().detach()
+        pitch_H_2 = pitch_H_2.cpu().detach()
+        conf_H_1 = conf_H_1.cpu().detach()
+        conf_H_2 = conf_H_2.cpu().detach()
+        hat_x_1 = hat_x_1.cpu().detach()
+        hat_x_2 = hat_x_2.cpu().detach()
         # calc difference to f0
-        diff = np.abs(freq_0 - f0)
-        return diff
+        #diff = np.abs(freq_0 - f0)
+        return lossTotal.detach().item(), pitch_error.cpu().detach().numpy().mean()
 
+    def test_step(self, x_batch):
+            ########
+            #
+            #   Validation cannot be done as we dont have the exact pitches
+            #   due to sync funciton required
+            #
+            #######
+            pitch_diff, x_1, x_2, f0 = x_batch
+            pitch_diff = pitch_diff.type(dtype)
+            x_1 = x_1.type(dtype)
+            x_2 = x_2.type(dtype)
+            # predict
+            pitch_H_1, conf_H_1, hat_x_1 = self._model(x_1)
+            pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
 
+            
+            # calculate error
+            pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
+
+            return pitch_H_1.cpu().detach().numpy(), pitch_H_2.cpu().detach().numpy()
+
+        
     def train_epoch(self):
         # set training mode
         self._model.train()
@@ -198,8 +240,8 @@ class Trainer:
             loss_p += p_loss
             loss_c += c_loss
             batch_counter += 1
-            if batch_counter % 100 == 0:
-                print("batch", batch_counter, "loss", loss_p, c_loss)
+            #if batch_counter % 100 == 0:
+                #print("batch", batch_counter, "loss", loss_p, c_loss)
             
         # calculate avg batch loss for logging
         avg_loss = loss_p/self._trainDs.__len__()
@@ -207,45 +249,71 @@ class Trainer:
         return avg_loss, avg_loss_c
 
 
-    def val_test_epoch(self):
-        #
+    def val_test_epoch(self, batch_data, mode='val'):
+        #    epochs_end = 30
+
         self._model.eval()
         #self._valDs = self._valDs.cuda()
-        print("val ds size", self._valDs.__len__())
         loss = 0
+        p_error = 0
+        y_hat1 = np.zeros((64,1))
+        y_hat2 = np.zeros((64,1))
         # itr through val set
         with torch.no_grad():
-            for b in self._valDs:
+            for b in batch_data:
                 # if USE_CUDA:
                 #     b = b.cuda()
+                if mode == 'val':
+                    v_loss, pitch_error = self.val_step(b)
+                    loss += v_loss
+                    p_error += pitch_error
+                if mode == 'test':
+                    pass
+                if mode == 'encoder_out':
+                    p1, p2 = self.test_step(b)
+                    y_hat1 = np.vstack((y_hat1, p1))
+                    y_hat2 = np.vstack((y_hat2, p2))
 
-                loss = self.val_step(b)
+        if mode == 'val':
+            avg_loss = loss/self._valDs.__len__()
+            avg_pitchLoss = pitch_error/self._valDs.__len__()
+            return avg_loss, avg_pitchLoss
+        if mode == 'encoder_out':
+            return {'yhat1': y_hat1[64:],
+                    'yhat2': y_hat2[64:]}
 
+    
 
-    def fit_model(self, epochs = -1):
+    def fit(self, epochs_start=1, epochs_end=0):
+        epochs = epochs_end - epochs_start
         assert epochs > 0, 'Epochs > 0'
         #
         loss_train = np.array([])
         loss_val = np.array([])
-        epoch_counter = 0
         min_loss = np.Inf
         #
-        while True:
-            # stop by epoch number
-            if epoch_counter >= epochs:
-                break
+        for i in range(epochs_start, epochs_end):
             # increment Counter
-            epoch_counter += 1
-            self.epoch_counter = epoch_counter
+            self.epoch_counter = i
             # train for an epoch and then calculate the loss and metrics on the validation set
             train_loss_p, train_loss_c = self.train_epoch()
             loss_train = np.append(loss_train, train_loss_p)
-            print("loss", epoch_counter , train_loss_p, train_loss_c)
-            logger.scalar_summary("loss", train_loss_p, epoch_counter)
+            logger.scalar_summary("train_loss", train_loss_p, i)
+            # validation
+            val_loss, p_error = self.val_test_epoch(self._valDs, mode='val')
+            loss_val = np.append(loss_val, val_loss)
+            logger.scalar_summary("val_loss", val_loss, i)
+            logger.scalar_summary("pitch_erro", p_error, i)
+            print(f"Epoch:{i}, trainL:{train_loss_p}, valL:{val_loss}")
+
             #
             if train_loss_p < min_loss:
                 
                 min_loss = train_loss_p
-                #self.save_checkpoint(epoch_counter)
+                self.save_checkpoint(i)
             
-        return loss_train
+        return {
+            'train_loss':loss_train,
+            'val_loss':loss_val,
+            'min_Loss':min_loss,
+            }
