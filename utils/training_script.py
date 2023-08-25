@@ -275,8 +275,8 @@ class Trainer:
                     y_hat2 = np.vstack((y_hat2, p2))
 
         if mode == 'val':
-            avg_loss = loss/self._valDs.__len__()
-            avg_pitchLoss = pitch_error/self._valDs.__len__()
+            avg_loss = loss/batch_data.__len__()
+            avg_pitchLoss = p_error/batch_data.__len__()
             return avg_loss, avg_pitchLoss
         if mode == 'encoder_out':
             return {'yhat1': y_hat1[64:],
@@ -313,7 +313,7 @@ class Trainer:
                 self.save_checkpoint(i)
             
         return {
+            'min_Loss':min_loss,
             'train_loss':loss_train,
             'val_loss':loss_val,
-            'min_Loss':min_loss,
             }
