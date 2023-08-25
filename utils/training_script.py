@@ -187,6 +187,10 @@ class Trainer:
         pitch_diff = self.sigma*pitch_diff
         lossPitch = self._lossPitch(pitch_hat_diff, pitch_diff)
         #lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
+        # take care of reshape
+        if x_1.size() != hat_x_1.size():
+            hat_x_1 = torch.reshape(hat_x_1, (hat_x_1.size()[0], -1))
+            hat_x_2 = torch.reshape(hat_x_2, (hat_x_1.size()[0], -1))
         lossRecons = self._lossRecons(x_1, x_2, hat_x_1, hat_x_2)
         lossTotal = self.w_pitch*lossPitch + self.w_recon*lossRecons
         # calculate frequency from pitch 
