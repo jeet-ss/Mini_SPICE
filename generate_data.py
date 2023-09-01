@@ -40,14 +40,15 @@ def generate_data(args):
     foo = []
     for i, s in enumerate(id_list):
         song, f0 = dataset.load_data(s)
-        #print(song.shape, f0.shape)
+        print(song.shape, f0.shape)
         # convert stereo to mono
         songs.append(librosa.to_mono(song))
         f0_list.append(f0)
         foo = np.concatenate((foo, f0[2]), axis=0)
     # remove zeros
     foo = foo[foo!=0]
-    print("fo", foo.shape, np.max(foo), np.min(foo)   )
+    print(f'Songs Shape:{songs[0].shape}, {len(songs)}')
+    #print("fo", foo.shape, np.max(foo), np.min(foo)   )
     # Convert to CQT array and concat
     Cqtt = np.zeros((1, 190))
     F0_interp = np.zeros(1)

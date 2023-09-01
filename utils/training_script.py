@@ -137,30 +137,26 @@ class Trainer:
         #
         ''' should I train the conf head while training the pitch head '''
         # freeze conf head
-        self._model.enc_block.conf_head.weight.requires_grad = False
-        # Backprop
-        # for n, param in self._model.named_parameters():
-        #     if param.requires_grad == False:
-        #         print ('111111',n)
-        lossTotal.backward(retain_graph=True)
+        ''' turning off conf head and keep one loss function only '''
+        ###self._model.enc_block.conf_head.weight.requires_grad = False
+        ###lossTotal.backward(retain_graph=True)
         ''' Do I need to pass gradient for this algebraic loss func also?? '''
-        # Update weights
-        #self._optim.step()
         # freeze network for conf head
-        for param in self._model.parameters():
-            param.requires_grad = False
+        ###for param in self._model.parameters():
+            #param.requires_grad = False
         # unfreeze conf head
-        self._model.enc_block.conf_head.weight.requires_grad = True
+        ###self._model.enc_block.conf_head.weight.requires_grad = True
         # update conf head weights
         # for n, param in self._model.named_parameters():
         #     if param.requires_grad:
         #         print ('222222',n, param.data)
-        lossConf.backward()
+        ###lossConf.backward()
+        lossTotal.backward()
         # update weights
         self._optim.step()
         # unfreeze model
-        for param in self._model.parameters():
-            param.requires_grad = True
+        ###for param in self._model.parameters():
+            #param.requires_grad = True
         # return 
         return lossTotal.detach().item(), lossConf.detach().item()
 
