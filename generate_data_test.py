@@ -47,12 +47,15 @@ def generate_data(args):
     f0_list = []
     foo = []
     for i, s in enumerate(id_list):
-        song, f0 = dataset.load_data(s)
-        print(song.shape, f0.shape)
-        # convert stereo to mono
-        songs.append(librosa.to_mono(song))
-        f0_list.append(f0)
-        foo = np.concatenate((foo, f0[2]), axis=0)
+        try:
+            song, f0 = dataset.load_data(s)
+            print(song.shape, f0.shape)
+            # convert stereo to mono
+            songs.append(librosa.to_mono(song))
+            f0_list.append(f0)
+            foo = np.concatenate((foo, f0[2]), axis=0)
+        except AssertionError:
+            print("{} song has problem".format(i))
     # remove zeros
     foo = foo[foo!=0]
     print(f'Songs Shape:{songs[0].shape}, {len(songs)}')
@@ -75,11 +78,11 @@ def generate_data(args):
         f0_new = interpolator(interp_time)
         F0_interp = np.concatenate((F0_interp, f0_new))
         # interpolate voicing for labels 
-        
+
         interpolator_voice = scipy.interpolate.interp1d(x=f[0], y=f[1], axis=0, fill_value = 'extrapolate')
         uv_new = interpolator_voice(interp_time)
         voicing_interp = np.concatenate((voicing_interp, uv_new))
-        
+
         time_arr=np.concatenate((time_arr, interp_time))
         #print("F0 interpolated shape: ", f0_new)data_pd = pd.DataFrame(data=data_np) 
     print("Time, CQT, Voiicing & F0 Shape: ",time_arr.shape, Cqtt.shape, voicing_interp.shape, F0_interp.shape)
