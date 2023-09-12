@@ -33,7 +33,7 @@ class CQT_Dataset(Dataset):
         k_1 = np.random.randint(self.k_min, self.k_max)
         k_2 = np.random.randint(self.k_min, self.k_max)
         # return two slices plus the difference for loss function
-        four_tuple.append(np.abs(k_1 - k_2))
+        four_tuple.append(k_1 - k_2)
         four_tuple.append(cqt_full[k_1: k_1 + self.F])
         four_tuple.append(cqt_full[k_2: k_2 + self.F])
         four_tuple.append(labels)

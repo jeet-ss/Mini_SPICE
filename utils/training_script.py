@@ -102,17 +102,11 @@ class Trainer:
         pitch_H_2, conf_H_2, hat_x_2 = self._model(x_2)
         
         # calculate loss
-        #if batch_counter % 50 == 0:
-            #print("Encoder values: ", pitch_H_1, conf_H_1, conf_H_2)
-            # print("batch", batch_counter, "loss", loss)
-            #print('in train', batch_counter, pitch_H_1.size(), pitch_diff.size(), pitch_H_2.size(), self.sigma)
         pitch_error = torch.abs((pitch_H_1.squeeze() - pitch_H_2.squeeze()) - self.sigma*pitch_diff)
-        # extra
+        # extra for torch Huber Loss
         pitch_hat_diff = torch.subtract(pitch_H_1.squeeze(), pitch_H_2.squeeze())
         pitch_diff = self.sigma*pitch_diff
 
-        #print('train 2 ', pitch_error.size())
-        #lossPitch = self._lossPitch(pitch_error)  
         lossPitch = self._lossPitch(pitch_hat_diff, pitch_diff)
         # conf head loss
         lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
@@ -138,27 +132,27 @@ class Trainer:
         ''' should I train the conf head while training the pitch head '''
         # freeze conf head
         ''' turning off conf head and keep one loss function only '''
-        ###self._model.enc_block.conf_head.weight.requires_grad = False
-        ###lossTotal.backward(retain_graph=True)
+        self._model.enc_block.conf_head.weight.requires_grad = False
+        lossTotal.backward(retain_graph=True)
         ''' Do I need to pass gradient for this algebraic loss func also?? '''
         # freeze network for conf head
-        ###for param in self._model.parameters():
-            #param.requires_grad = False
+        for param in self._model.parameters():
+            param.requires_grad = False
         # unfreeze conf head
-        ###self._model.enc_block.conf_head.weight.requires_grad = True
+        self._model.enc_block.conf_head.weight.requires_grad = True
         # update conf head weights
         # for n, param in self._model.named_parameters():
         #     if param.requires_grad:
         #         print ('222222',n, param.data)
-        ###lossConf.backward()
-        lossTotal.backward()
+        lossConf.backward()
+        ###lossTotal.backward()
         # update weights
         self._optim.step()
         # unfreeze model
-        ###for param in self._model.parameters():
-            #param.requires_grad = True
+        for param in self._model.parameters():
+            param.requires_grad = True
         # return 
-        return lossTotal.detach().item(), lossConf.detach().item()
+        return lossTotal.detach().item(), lossConf.detach().item(), lossRecons.detach().item(), lossPitch.detach().item()
 
     def val_step(self, x_batch):
         ########
@@ -182,7 +176,7 @@ class Trainer:
         pitch_hat_diff = torch.subtract(pitch_H_1.squeeze(), pitch_H_2.squeeze())
         pitch_diff = self.sigma*pitch_diff
         lossPitch = self._lossPitch(pitch_hat_diff, pitch_diff)
-        #lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
+        lossConf = self._lossConf(conf_H_1, conf_H_2, pitch_error, self.sigma)
         # take care of reshape
         if x_1.size() != hat_x_1.size():
             hat_x_1 = torch.reshape(hat_x_1, (hat_x_1.size()[0], -1))
@@ -201,8 +195,9 @@ class Trainer:
         hat_x_2 = hat_x_2.cpu().detach()
         # calc difference to f0
         #diff = np.abs(freq_0 - f0)
-        return lossTotal.detach().item(), pitch_error.cpu().detach().numpy().mean()
-
+        
+        return lossTotal.detach().item(), pitch_error.cpu().detach().numpy().mean(), lossConf.detach().item(), lossRecons.detach().item(), lossPitch.detach().item()
+    
     def test_step(self, x_batch):
             ########
             #
@@ -229,24 +224,26 @@ class Trainer:
         # set training mode
         self._model.train()
         # iterate through the training set
-        loss_p = 0
-        loss_c = 0
+        loss_Total = 0
+        loss_Conf = 0
+        loss_Pitch = 0
+        loss_Recons = 0
         batch_counter = 0
         for b in self._trainDs:
-            # if USE_CUDA:
-            #         b = b.cuda()
-            # x is One batch of data
-            p_loss, c_loss = self.train_step(b, batch_counter)
-            loss_p += p_loss
-            loss_c += c_loss
+            t_loss, c_loss, r_loss, p_loss = self.train_step(b, batch_counter)
+            loss_Total += t_loss
+            loss_Conf += c_loss
+            loss_Recons += r_loss
+            loss_Pitch += p_loss
             batch_counter += 1
-            #if batch_counter % 100 == 0:
-                #print("batch", batch_counter, "loss", loss_p, c_loss)
             
         # calculate avg batch loss for logging
-        avg_loss = loss_p/self._trainDs.__len__()
-        avg_loss_c = loss_c/self._trainDs.__len__()
-        return avg_loss, avg_loss_c
+        avg_loss_t = loss_Total/self._trainDs.__len__()
+        avg_loss_c = loss_Conf/self._trainDs.__len__()
+        avg_loss_r = loss_Recons/self._trainDs.__len__()
+        avg_loss_p = loss_Pitch/self._trainDs.__len__()
+
+        return avg_loss_t, avg_loss_c, avg_loss_r, avg_loss_p
 
 
     def val_test_epoch(self, batch_data, mode='val'):
@@ -254,7 +251,10 @@ class Trainer:
 
         self._model.eval()
         #self._valDs = self._valDs.cuda()
-        loss = 0
+        loss_Total = 0
+        loss_Conf = 0
+        loss_Pitch = 0
+        loss_Recons = 0
         p_error = 0
         y_hat1 = np.zeros((64,1))
         y_hat2 = np.zeros((64,1))
@@ -264,8 +264,11 @@ class Trainer:
                 # if USE_CUDA:
                 #     b = b.cuda()
                 if mode == 'val':
-                    v_loss, pitch_error = self.val_step(b)
-                    loss += v_loss
+                    t_loss, pitch_error, c_loss, r_loss, p_loss  = self.val_step(b)
+                    loss_Total += t_loss
+                    loss_Conf += c_loss
+                    loss_Recons += r_loss
+                    loss_Pitch += p_loss
                     p_error += pitch_error
                 if mode == 'test':
                     pass
@@ -275,9 +278,13 @@ class Trainer:
                     y_hat2 = np.vstack((y_hat2, p2))
 
         if mode == 'val':
-            avg_loss = loss/batch_data.__len__()
-            avg_pitchLoss = p_error/batch_data.__len__()
-            return avg_loss, avg_pitchLoss
+            avg_loss_t = loss_Total/batch_data.__len__()
+            avg_pitchError = p_error/batch_data.__len__()
+            avg_loss_r = loss_Recons/batch_data.__len__()
+            avg_loss_c = loss_Conf/batch_data.__len__()
+            avg_loss_p = loss_Pitch/batch_data.__len__()
+
+            return avg_loss_t, avg_pitchError, avg_loss_c, avg_loss_r, avg_loss_p
         if mode == 'encoder_out':
             return {'yhat1': y_hat1[64:],
                     'yhat2': y_hat2[64:]}
@@ -288,32 +295,64 @@ class Trainer:
         epochs = epochs_end - epochs_start
         assert epochs > 0, 'Epochs > 0'
         #
-        loss_train = np.array([])
-        loss_val = np.array([])
+        loss_train_total = np.array([])
+        loss_train_conf = np.array([])
+        loss_train_recons = np.array([])
+        loss_train_pitch = np.array([])
+        loss_val_total = np.array([])
+        loss_val_conf = np.array([])
+        loss_val_recons = np.array([])
+        loss_val_pitch = np.array([])
+        
         min_loss = np.Inf
         #
         for i in range(epochs_start, epochs_end):
             # increment Counter
             self.epoch_counter = i
             # train for an epoch and then calculate the loss and metrics on the validation set
-            train_loss_p, train_loss_c = self.train_epoch()
-            loss_train = np.append(loss_train, train_loss_p)
-            logger.scalar_summary("train_loss", train_loss_p, i)
+            train_loss_t, train_loss_c, train_loss_r, train_loss_p = self.train_epoch()
+            # save
+            loss_train_total = np.append(loss_train_total, train_loss_t)
+            loss_train_conf = np.append(loss_train_conf, train_loss_c)
+            loss_train_recons = np.append(loss_train_recons, train_loss_r)
+            loss_train_pitch = np.append(loss_train_pitch, train_loss_p)
+            # log
+            logger.scalar_summary("train_Total_loss", train_loss_t, i)
+            logger.scalar_summary("train_Conf_loss", train_loss_c, i)
+            logger.scalar_summary("train_Recons_loss", train_loss_r, i)
+            logger.scalar_summary("train_Pitch_loss", train_loss_p, i)
             # validation
-            val_loss, p_error = self.val_test_epoch(self._valDs, mode='val')
-            loss_val = np.append(loss_val, val_loss)
-            logger.scalar_summary("val_loss", val_loss, i)
-            logger.scalar_summary("pitch_erro", p_error, i)
-            print(f"Epoch:{i}, trainL:{train_loss_p}, valL:{val_loss}")
+            val_loss_t, p_error, val_loss_c, val_loss_r, val_loss_p = self.val_test_epoch(self._valDs, mode='val')
+            # save
+            loss_val_total = np.append(loss_val_total, val_loss_t)
+            loss_val_conf = np.append(loss_val_conf, val_loss_c)
+            loss_val_recons = np.append(loss_val_recons, val_loss_r)
+            loss_val_pitch = np.append(loss_val_pitch, val_loss_p)
+            # log
+            logger.scalar_summary("val_Total_loss", val_loss_t, i)
+            logger.scalar_summary("pitch_Error", p_error, i)
+            logger.scalar_summary("val_Conf_loss", val_loss_c, i)
+            logger.scalar_summary("val_Recons_loss", val_loss_r, i)
+            logger.scalar_summary("val_Pitch_loss", val_loss_p, i)
+            
+            # print after 20 epochs
+            if i%20==0:
+                print(f"Epoch:{i}, trainL:{train_loss_t}, valL:{val_loss_t}")
 
-            #
-            if train_loss_p < min_loss:
+            # save checkpoint if better
+            if train_loss_t < min_loss:
                 
-                min_loss = train_loss_p
+                min_loss = train_loss_t
                 self.save_checkpoint(i)
             
         return {
             'min_Loss':min_loss,
-            'train_loss':loss_train,
-            'val_loss':loss_val,
+            'train_loss_total':loss_train_total,
+            'train_loss_conf': loss_train_conf,
+            'train_loss_recons':loss_train_recons,
+            'train_loss_pitch':loss_train_pitch,
+            'val_loss_total':loss_val_total,
+            'val_loss_conf':loss_val_conf,
+            'val_loss_recons':loss_val_recons,
+            'val_loss_pitch':loss_val_pitch
             }
