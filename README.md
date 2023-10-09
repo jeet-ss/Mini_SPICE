@@ -1,6 +1,8 @@
 # Mini_SPICE
 Simplified Implementation of Spice
+
 Contributors: Jeet Sen Sarma, Jibak Sarkar
+
 Special Thanks to: Prof. Dr. Meinard Müller, Simon Schwär
 
 
