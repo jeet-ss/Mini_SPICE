@@ -1,5 +1,5 @@
 # Mini_SPICE
-Simplified Implementation of Spice
+Simplified Implementation of SPICE
 
 Contributors: Jeet Sen Sarma, Jibak Sarkar
 
