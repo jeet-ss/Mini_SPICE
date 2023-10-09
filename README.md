@@ -5,6 +5,7 @@ Contributors: Jeet Sen Sarma, Jibak Sarkar
 
 Special Thanks to: Prof. Dr. Meinard Müller, Simon Schwär
 
+ Reference: [SPICE: Self-supervised Pitch Estimation](https://doi.org/10.48550/arXiv.1910.11664)
 
 ## Implementation
 1. Datasets are loaded using "data_files/dataloader.py"
