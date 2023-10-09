@@ -4,11 +4,9 @@ import numpy as np
 
 
 class CQT_Dataset(Dataset):
-    def __init__(self, data, mode='train'):
+    def __init__(self, data):
         super().__init__()
-        self.data = data#.iloc[:, -1:]
-        #self.labels = data.iloc[:, :-1]
-        self.mode = mode
+        self.data = data
         self.k_max = 8
         self.k_min = 0
         self.F = 128
@@ -42,11 +40,9 @@ class CQT_Dataset(Dataset):
     
     
 class CQT_Dataset_test(Dataset):
-    def __init__(self, data, mode='train'):
+    def __init__(self, data,):
         super().__init__()
-        self.data = data#.iloc[:, -1:]
-        #self.labels = data.iloc[:, :-1]
-        self.mode = mode
+        self.data = data
         self.k_max = 8
         self.k_min = 0
         self.F = 128
@@ -73,6 +69,7 @@ class CQT_Dataset_test(Dataset):
         k_1 = np.random.randint(self.k_min, self.k_max)
         k_2 = np.random.randint(self.k_min, self.k_max)
         # return two slices plus the difference for loss function
+        # also return voice flag and time stamp for evaluation
         six_tuple.append(time_arr)
         six_tuple.append(np.abs(k_1 - k_2))
         six_tuple.append(cqt_full[k_1: k_1 + self.F])

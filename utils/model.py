@@ -1,11 +1,13 @@
 import torch
 from torch import nn
 
-""" Put Sigmoid/RelU layer after FC layer """
-
 class Conv_block(nn.Module):
     def __init__(self, in_channels, out_channels, filter_size=3, stride=1, 
                 padding=1, pool_filter_size=3, pool_stride=2, pool_padding=1):
+        '''
+            Convolution block of the Spice Encoder
+            all default values set according to paper
+        '''
         super().__init__()
         self.conv = nn.Conv1d(in_channels, out_channels, kernel_size=filter_size, stride=stride, padding=padding, bias=False)
         self.batch = nn.BatchNorm1d(out_channels)
@@ -39,6 +41,7 @@ class Spice_Encoder(nn.Module):
         self.fc2 = nn.Linear(48, 1)
         # Conf Head
         self.conf_head = nn.Linear(1024, 1)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, input_1D):
         # channel and batch size
@@ -129,7 +132,7 @@ class Spice_Decoder(nn.Module):
 
         
     def forward(self, input_1D, unpool_mat_list = None):
-        ''' just do unsqueeze to make batch size one '''
+        # make batch size 1
         input_1D = input_1D.unsqueeze(dim=1)
         batch_size = input_1D.size()[0]
         #
@@ -139,15 +142,12 @@ class Spice_Decoder(nn.Module):
         ###
         # do the deconv layer with or without Unpooling separately for each layer
         ###
-        #input_1D = self.deconv_block1(input_1D, unpool_mat_list[5])
         if self.unPooling_list[0] and len(unpool_mat_list)>5:
             input_1D = self.deconv_block1(input_1D, unpool_mat_list[5], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block1(input_1D)
         
         if self.unPooling_list[1] and len(unpool_mat_list)>4:
-            #xx = torch.floor(unpool_mat_list[4][:,:256,:]/2).to(torch.int64)
-            #print("2nd deconv", xx.size(), input_1D.size())
             input_1D = self.deconv_block2(input_1D, unpool_mat_list[4], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         else:
             input_1D = self.deconv_block2(input_1D)

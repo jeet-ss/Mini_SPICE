@@ -37,6 +37,7 @@ class Spice_Decoder_1Unpool(nn.Module):
     def __init__(self, channel_list = [512, 256, 256, 256, 128, 64, 32], ):
         super().__init__()
         """
+            This is a serialized version of the 1UnPool decoder for optimization
             This version of Decoder uses the model with 1 unpool layer
             channel_list : is a list with channels for all conv blocks, first entry is input channels
                 default is set to original values from paper
@@ -93,7 +94,7 @@ class Spice_model_1Unpool(nn.Module):
         super().__init__()
         """
         Unified SPICE model
-            default version 
+            1Unpool version 
         """
         self.enc_block = Spice_Encoder(channel_list=channel_enc_list)
         self.dec_block = Spice_Decoder_1Unpool(channel_list=channel_dec_list)
@@ -113,6 +114,7 @@ class Spice_Decoder_Mirror(nn.Module):
     def __init__(self, channel_list = [512, 512, 512, 256, 128, 64, 1], ):
         super().__init__()
         """
+            This is a serialized version of the Mirror decoder for optimization
             This version of Decoder uses the model with 1 unpool layer
             channel_list : is a list with channels for all conv blocks, first entry is input channels
                 default is set to original values from paper
@@ -147,7 +149,7 @@ class Spice_Decoder_Mirror(nn.Module):
         input_1D = self.unpool(input_1D, unpool_mat_list[5], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))   
         # do the deconv layer     
         input_1D = self.deconv_block1(input_1D)
-        
+        # repeat for each layer
         input_1D = self.unpool(input_1D, unpool_mat_list[4], output_size=(input_1D.size()[0], input_1D.size()[1], input_1D.size()[2]*2))
         input_1D = self.deconv_block2(input_1D)
         

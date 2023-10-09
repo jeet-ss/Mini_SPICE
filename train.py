@@ -32,13 +32,12 @@ def train(args):
     # define Hyperparams
     learning_rate = 1e-4       # original 1e-4
     epochs_st = 0
-    epochs_end = 21
+    epochs_end = 20
     batch_size = 64             # original 64
-    #tau = 0.1                  # for huber loss
     CQT_bins_per_octave = 24
     wpitch = np.power(10, 4)
     wrecon = 1
-    retrain_epoch = 9
+    retrain_epoch_num = 9
     name_variant='withCOnf'
 
     ### Architecture params
@@ -51,47 +50,34 @@ def train(args):
     unPooling_list_rev = [True, True, True, True, True, True]
 
     # Load Data
-    #data_np = np.load('./CQT_data/MedleyDB.npy')                              # load nd.array from file
-    #data_pd = pd.DataFrame(data=data_np)  
-    data_pd = pd.read_pickle("./CQT_data/MIR1k.pkl") 
+    data_pd = pd.read_pickle(args.fs) 
     print("total data shape: ",data_pd.shape)
-    # remove rows of cqt where label (last) column is zero
-    #data_pd.drop(data_pd.loc[data_pd.iloc[:, -1]<=0].index, inplace=True) 
-    # Shuffle data
-    #data_pd = data_pd.sample(frac=1, random_state=10).reset_index()
-    #data_pd.drop(columns=['index'],axis=1, inplace=True)
-    # 
-    # Mir1kdf
-    fmax, fmin = 666.664939769901, 66.9456331525636256
-    # MDBSynth
-    #fmax, fmin = 1210.180328, 46.259328
+    # Decide the fmin and fmax of the dataset
+    fmax, fmin = 666.664939769901, 66.9456331525636256      # MIR1k
+    #fmax, fmin = 1210.180328, 46.259328        # MDBSynth
+
     # get scaling factor sigma
     sigma_ = scaling_factor(Q=CQT_bins_per_octave, fmax=fmax, fmin=fmin)
     # set tau for huber loss
     tau = 0.25*sigma_
-    #tau = 0.1
+    print(f'Data shape:{data_pd.shape}, fmax,fmin:{fmax,fmin}, sigma:{sigma_}, tau:{tau}')
 
     # Split into batches and Dataloader 
-    train, val = train_test_split(data_pd[:100], train_size=0.8, test_size=0.2, random_state=1)
+    train, val = train_test_split(data_pd[:50], train_size=0.8, test_size=0.2, random_state=1)
     print(f'trainData:{train.shape}, valData:{val.shape}')
     train_batches = DataLoader(CQT_Dataset(data=train, mode='train'), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     val_batches = DataLoader(CQT_Dataset(data=val, mode='val'), batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    print(f"train batches:{len(train_batches)},val batches:{len(val_batches)},sigma:{sigma_}")
+    print(f"train batches:{len(train_batches)},val batches:{len(val_batches)}")
 
     # set up model 
     spice_u = Spice_model(channel_enc_list, channel_dec_list, unPooling_list)
-    spice_uC = torch.compile(Spice_model(channel_enc_list, channel_dec_list, unPooling_list))
     spice_r = Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev)
-    spice_rC = torch.compile(Spice_model(channel_enc_list, channel_dec_list_rev, unPooling_list_rev))
     spice_s = Spice_model_Sterne()
-    sp_r = Spice_model_Mirror()
-    sp_u = Spice_model_1Unpool()
-    sp_rC = torch.compile(Spice_model_Mirror())
-    sp_uC = torch.compile(Spice_model_1Unpool())
-    #
+    #sp_r = Spice_model_Mirror()        # serialized model
+    #sp_u = Spice_model_1Unpool()       # serialized model
     
     # set up loss funcitons
-    #pitch_loss = Huber_loss(tau=tau)
+    #pitch_loss = torch.nn.MSELoss()        # L2 loss function
     pitch_loss = torch.nn.HuberLoss(delta=tau)
     recons_loss = Recons_loss()
     conf_loss = Conf_loss()
@@ -110,7 +96,8 @@ def train(args):
         'params' : 'Mir1k data, 1k epoch,',
         'name' : name_variant,
     })
-    #trainer.save_model_onnx("check2.onnx")
+
+    # save loss data
     np.save(f'{name_variant}_{epochs_st}-{epochs_end}_data.npy', loss_data)
 
     # get encoder output
@@ -118,7 +105,6 @@ def train(args):
     #np.save(name_variant+'y_hat.npy', y_hat)
     #print(yh1.shape)
 
-    # plot data
 
 
 if __name__ == '__main__':
@@ -126,14 +112,4 @@ if __name__ == '__main__':
     parser.add_argument('--fp', '-filepath', type=str, default="./CQT_data/MIR1k.pkl", help='file path of data')
     args = parser.parse_args()
 
-    # pr = cProfile.Profile()
-    # pr.enable()
     train(args)
-    #cProfile.run('re.compile("train(args)")', 'profileOut')
-    # pr.disable()
-    # s = io.StringIO()
-    # sortby = SortKey.CUMULATIVE
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.strip_dirs()
-    # print("s. value: " , s.getvalue())
-    # ps.dump_stats('pD_bF.crof')

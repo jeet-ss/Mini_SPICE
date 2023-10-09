@@ -71,3 +71,6 @@ class Logger(object):
         #summary = tf.Summary(value=[tf.Summary.Value(tag=tag, histo=hist)])
         self.writer.add_histogram(tag, values, step)
         self.writer.close() 
+
+    def model_graph():
+        pass
