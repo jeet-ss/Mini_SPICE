@@ -7,7 +7,7 @@ import sys
 import os 
 import librosa
 from tqdm import tqdm
-from utils.model import Spice_model
+# from utils.model import Spice_model
 
 
 class Calibrator():
@@ -103,3 +103,5 @@ class Calibrator():
         print("Value of PT_OFFSET :{}, Value of PT_SLOPE: {}\n".format(b,s))
         return b,s
     
+    def get_data(self):
+        return self.data, self.A, self.B

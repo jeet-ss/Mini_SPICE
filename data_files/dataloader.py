@@ -11,6 +11,7 @@ import soundfile as sf
 import resampy
 import os
 import pathlib
+import scipy
 
 
 
@@ -115,9 +116,10 @@ class MedleyDBLoader(DataLoader):
         self.annot_dt = annot_hop / orig_fs
 
         db_path = pathlib.Path(__file__).parent.resolve()
-        self.audio_path = os.path.join(db_path, audio_loc)
-        self.f0_path = os.path.join(db_path, f0_loc)
-
+        # self.audio_path = os.path.join(db_path, audio_loc)
+        # self.f0_path = os.path.join(db_path, f0_loc)
+        self.audio_path = audio_loc
+        self.f0_path = f0_loc
         assert os.path.exists(self.audio_path), "Audio location not found."
         assert os.path.exists(self.f0_path), "F0 location not found."
 
@@ -286,10 +288,12 @@ class MIR1KLoader(DataLoader):
         self.annot_dt = annot_hop / orig_fs
 
         db_path = pathlib.Path(__file__).parent.resolve()
-        self.audio_path = os.path.join(db_path, audio_loc)
-        self.f0_path = os.path.join(db_path, f0_loc)
-        self.voiced_path = os.path.join(db_path, voiced_loc)
-
+        # self.audio_path = os.path.join(db_path, audio_loc)
+        # self.f0_path = os.path.join(db_path, f0_loc)
+        # self.voiced_path = os.path.join(db_path, voiced_loc)
+        self.audio_path = audio_loc
+        self.f0_path = f0_loc
+        self.voiced_path = voiced_loc
         assert os.path.exists(self.audio_path), "Audio location not found."
         assert os.path.exists(self.f0_path), "F0 location not found."
         assert os.path.exists(self.voiced_path), "Voiced/Unvoiced location not found."
@@ -346,5 +350,97 @@ class MIR1KLoader(DataLoader):
         f0[0,:] = np.arange(1, N+1) * self.annot_dt
         f0[1,:] = raw_voiced
         f0[2,:] = raw_f0
+
+        return x, f0
+
+    
+    
+class DatagenLoader(DataLoader):
+    def __init__(self, fs=44100, audio_loc="../datasets/pre_post/wavfile", f0_loc="../datasets/pre_post/labels", annot_hop=320, orig_fs=16000):
+        """ Initialize the DataLoader for MIR-1K
+        
+        Parameters
+        ==========
+        fs : int
+            the desired sampling rate. If it is different from the sampling rate of the audio files,
+            they will be resampled upon loading
+        audio_loc : string
+            path to the audio files relative to this `dataloader.py`, probably doesn't have to be
+            changed
+        f0_loc : string
+            path to the F0 files relative to this `dataloader.py`, probably doesn't have to be
+            changed
+        annot_hop : int
+            hop size of the F0 annotations, probably doesn't have to be changed
+        orig_fs : int
+            original sampling rate of the data, probably doesn't have to be changed
+        """
+
+        self.fs = fs
+        self.annot_dt = annot_hop / orig_fs
+
+        db_path = pathlib.Path(__file__).parent.resolve()
+        # self.audio_path = os.path.join(db_path, audio_loc)
+        # self.f0_path = os.path.join(db_path, f0_loc)
+        # self.voiced_path = os.path.join(db_path, voiced_loc)
+        self.audio_path = audio_loc
+        self.f0_path = f0_loc
+        # self.voiced_path = voiced_loc
+        assert os.path.exists(self.audio_path), "Audio location not found."
+        assert os.path.exists(self.f0_path), "F0 location not found."
+        # assert os.path.exists(self.voiced_path), "Voiced/Unvoiced location not found."
+
+        self.ids = []
+
+        for f in os.listdir(self.audio_path):
+            audio_file = os.path.join(self.audio_path, f)
+            if os.path.isfile(audio_file) and f[-4:] == ".wav":
+                fid = f[:-4]
+                self.ids.append(fid)
+
+    def get_num_elements(self):
+        """ Return the number of elements in the dataset
+        """
+        return len(self.ids)
+
+    def get_ids(self):
+        """ Get a list of the IDs of all elements in this dataset
+        """
+        return self.ids
+
+    def load_data(self, file_id : str):
+        """ Load the (possibly resampled) audio data and F0 annotations for a given ID
+
+        Returns
+        =======
+            x : np.ndarray
+                A shape (C, L) numpy array for time domain audio with C channels and L samples
+            f0 : np.ndarray
+                A shape (3, N) numpy array for N frames. First row is time in seconds,
+                second row is whether the frame is voiced (1) or unvoiced (0),
+                third row is the F0 value in Hz (0 if unvoiced)
+        """
+        assert file_id in self.ids, "Unknown file_id."
+        ap = os.path.join(self.audio_path, file_id + ".wav")
+        fp = os.path.join(self.f0_path, file_id + ".csv")
+        # vp = os.path.join(self.voiced_path, file_id + ".vocal")
+
+        # load audio
+        x = self._load_audio(ap)
+        N = np.ceil(x.shape[1] / self.fs / self.annot_dt).astype(int)
+        raw_data = np.loadtxt(fp, delimiter=",", usecols=[0,2]).T
+
+        # reformat annotations
+        f0 = np.zeros((3, N))
+        print(self.annot_dt)
+        f0[0,:] = np.arange(N) * self.annot_dt
+        idx = np.where(self._isin(f0[0,:], raw_data[0,:]))
+        f0[1,idx] = 1
+        # interpolator = scipy.interpolate.interp1d(x=raw_data[0,:], y=raw_data[1,:], axis=0, fill_value = 'extrapolate')
+        # interp_time = np.arange(0, len(idx[0]), 1)*self.annot_dt
+        # f0_new = interpolator(interp_time)
+        print(len(idx[0]),len(raw_data[1,:]))
+        assert len(idx[0]) == len(raw_data[1,:]), "The item cannot be loaded due to an annotation length mismatch."
+        f0[2,idx] = raw_data[1,:]
 
         return x, f0
